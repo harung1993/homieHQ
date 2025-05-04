@@ -1,2 +1,1 @@
-# homeownerpal
-Flask based service to manage your home
+# HomieHQ - Home Management Platform
