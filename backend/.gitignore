@@ -1,0 +1,91 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Flask
+instance/
+.webassets-cache
+flask_session/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+dev.db
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Uploads and user content
+uploads/
+/uploads
+**/uploads/**
+!uploads/.gitkeep
+
+# Logs
+logs/
+*.log
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# SQLAlchemy migrations
+migrations/versions/
+!migrations/README
+!migrations/script.py.mako
+!migrations/env.py
+!migrations/alembic.ini
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Environment specific
+.env.local
+.env.development
+.env.production
+.env.*
+!.env.example
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
