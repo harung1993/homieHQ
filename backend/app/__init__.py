@@ -48,7 +48,18 @@ def create_app(config_class=Config):
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     }})'''
 
-    CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
+    allowed_origins = os.environ.get('CORS_ALLOWED_ORIGINS', 
+                               'http://localhost:3000,http://localhost:3002,http://frontend:3000')
+    origins = allowed_origins.split(',')
+    print(f"CORS allowing origins: {origins}")
+
+    CORS(app, resources={r"/*": {
+        "origins": origins,
+        "supports_credentials": True,
+        "allow_headers": ["Content-Type", "Authorization"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    }})
+
     
     # Create upload directories - use the configured upload folder
     upload_documents_path = os.path.join(app.config['UPLOAD_FOLDER'], 'documents')

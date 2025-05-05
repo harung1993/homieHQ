@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  web:
+    image: harung43/homiehq:backend
+    ports:
+      - "5008:5008"
+    volumes:
+      - ./uploads:/app/uploads  # Only mount uploads directory
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://homiehq:homiehq@db:5432/homiehq
+      - SQLALCHEMY_DATABASE_URI=postgresql://homiehq:homiehq@db:5432/homiehq
+      - DATABASE_HOST=db
+      - POSTGRES_USER=homiehq
+      - POSTGRES_PASSWORD=homiehq
+      - POSTGRES_DB=homiehq
+    depends_on:
+      - db
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=homiehq
+      - POSTGRES_PASSWORD=homiehq
+      - POSTGRES_DB=homiehq
+    ports:
+      - "5432:5432"
+volumes:
+  postgres_data:
