@@ -1,4 +1,3 @@
-// Modified api.js
 import axios from 'axios';
 
 // Add proper protocol to URLs without one
@@ -9,16 +8,28 @@ const addProtocol = (url) => {
   return url;
 };
 
-// Extract the base URL for API calls
-const rawBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5008/api';
-export const API_BASE_URL = addProtocol(
-  rawBaseUrl.endsWith('/api') ? rawBaseUrl.slice(0, -4) : rawBaseUrl
-);
+// Get runtime config from global `window` object
+const runtimeApiUrl = window?.REACT_APP_API_URL || '';
 
-// Base API URL - prioritize environment variable, with fallback
+// Convert Docker service name 'web' to localhost for browser environment
+let rawBaseUrl;
+if (runtimeApiUrl.includes('web:')) {
+  // Replace 'web' hostname with 'localhost' for browser environment
+  rawBaseUrl = runtimeApiUrl.replace('web:', 'localhost:');
+  console.log('Converted Docker service name to localhost:', rawBaseUrl);
+} else {
+  rawBaseUrl = runtimeApiUrl || 'http://localhost:5008/api';
+}
+
+// Normalize and clean base URL
+export const API_BASE_URL = rawBaseUrl.endsWith('/api')
+  ? rawBaseUrl.slice(0, -4)
+  : rawBaseUrl;
+
 const BASE_URL = addProtocol(rawBaseUrl);
 
-console.log('API Base URL:', BASE_URL); // Debug output
+console.log('API Base URL:', BASE_URL);
+
 
 // Create an axios instance with default settings
 const api = axios.create({

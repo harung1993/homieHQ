@@ -173,35 +173,54 @@ const Landing = () => {
           setLoading(false);
           return;
         }
-  
+    
         const response = await axios.get('/api/properties/', {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
-  
-        const properties = response.data || [];
-        setHasProperties(properties.length > 0);
-  
-        // Check if user has a primary residence
-        const primaryProperty = properties.find(p => p.is_primary_residence);
-        setHasPrimaryResidence(!!primaryProperty);
+    
+        // Handle different response formats and empty responses
+        // For first-time users, ensure we have an empty array if no properties
+        let properties = [];
         
-        if (primaryProperty) {
-          // Remove the unused variable setPrimaryPropertyId
-          localStorage.setItem('currentPropertyId', primaryProperty.id);
-        } else if (properties.length > 0) {
-          // If no primary residence but has properties, set the first one as current
-          localStorage.setItem('currentPropertyId', properties[0].id);
+        if (response.data) {
+          if (Array.isArray(response.data)) {
+            properties = response.data;
+          } else if (response.data.properties && Array.isArray(response.data.properties)) {
+            properties = response.data.properties;
+          }
         }
-  
+        
+        console.log('Properties data:', properties); // Debug output
+        
+        setHasProperties(properties.length > 0);
+    
+        // If no properties, we'll route to add-property anyway, so we can skip this logic
+        if (properties.length > 0) {
+          // Check if user has a primary residence
+          const primaryProperty = properties.find(p => p.is_primary_residence);
+          setHasPrimaryResidence(!!primaryProperty);
+          
+          if (primaryProperty) {
+            localStorage.setItem('currentPropertyId', primaryProperty.id);
+          } else {
+            // If no primary residence but has properties, set the first one as current
+            localStorage.setItem('currentPropertyId', properties[0].id);
+          }
+        }
+    
         setLoading(false);
       } catch (error) {
         console.error('Error checking user properties:', error);
+        // For first-time login, even if the properties endpoint fails,
+        // we should still set loading to false and let the app continue
         setLoading(false);
+        // Assume no properties on error
+        setHasProperties(false);
       }
     };
-  
+    
     checkUserProperties();
   }, []);
 
