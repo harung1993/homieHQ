@@ -1,3 +1,4 @@
+// Updated LoginForm.js with "Forgot Password?" link
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import api from '../../services/api';
@@ -14,7 +15,7 @@ const LoginForm = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check if there's a message from the signup page
+    // Check if there's a message from the signup page or password reset
     if (location.state && location.state.message) {
       setMessage(location.state.message);
     }
@@ -49,6 +50,12 @@ const LoginForm = () => {
         
         if (response.user) {
           localStorage.setItem('user', JSON.stringify(response.user));
+          
+          // Check if email is verified (if your API includes this field)
+          if (response.user.email_verified === false) {
+            setError('Please verify your email address before logging in.');
+            return;
+          }
         }
         
         // Redirect to landing route which will determine where to go next
@@ -89,7 +96,8 @@ const LoginForm = () => {
       id: 1,
       email: formData.email || 'test@example.com',
       first_name: 'Test',
-      last_name: 'User'
+      last_name: 'User',
+      email_verified: true
     };
     
     // Create mock token
@@ -156,6 +164,13 @@ const LoginForm = () => {
               onChange={handleChange}
               required
             />
+            
+            {/* Add Forgot Password link */}
+            <div className="flex justify-end mt-2">
+              <Link to="/forgot-password" className="text-sm text-secondary hover:text-secondary-light">
+                Forgot Password?
+              </Link>
+            </div>
           </div>
           
           <div className="mt-6">
@@ -176,6 +191,17 @@ const LoginForm = () => {
               Sign up
             </Link>
           </p>
+        </div>
+        
+        {/* For development/debugging purposes */}
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            className="text-xs text-gray-400 underline"
+            onClick={handleDevelopmentLogin}
+          >
+            Use Development Mode
+          </button>
         </div>
       </div>
     </div>

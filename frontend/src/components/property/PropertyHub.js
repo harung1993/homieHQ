@@ -32,10 +32,10 @@ const PropertyHub = () => {
     const now = new Date();
     const month = now.getMonth();
     
-    if (month >= 2 && month <= 4) return 'spring';
-    if (month >= 5 && month <= 7) return 'summer';
-    if (month >= 8 && month <= 10) return 'fall';
-    return 'winter';
+    if (month >= 2 && month <= 4) return 'Spring';
+    if (month >= 5 && month <= 7) return 'Summer';
+    if (month >= 8 && month <= 10) return 'Fall';
+    return 'Winter';
   };
 
   // Memoized function to fetch property metrics
@@ -66,7 +66,7 @@ const PropertyHub = () => {
         const expensesResponse = await apiHelpers.get(
           `/finances/expenses/`,
           { property_id: property.id, start_date: startDateStr, end_date: endDateStr }
-        ).catch(() => ({ data: [] }));
+        ).catch(() => []);  // Return empty array on error
         
         // Add to total expenses
         const expenses = Array.isArray(expensesResponse) ? expensesResponse : [];
@@ -87,32 +87,41 @@ const PropertyHub = () => {
         const maintenanceResponse = await apiHelpers.get(
           '/maintenance/',
           { status: 'pending', property_id: property.id }
-        ).catch(() => ([]));
+        ).catch(() => []);  // Return empty array on error
         
         const maintenanceItems = Array.isArray(maintenanceResponse) ? maintenanceResponse : [];
         totalMaintenance += maintenanceItems.length;
         
         // Fetch seasonal maintenance checklist data for all seasons
-        const seasons = ['spring', 'summer', 'fall', 'winter'];
+        // Using a try/catch block for each season separately
+        const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
         for (const season of seasons) {
           try {
             const seasonResponse = await apiHelpers.get(
               `/maintenance/checklist/${season}`,
               { property_id: property.id }
-            ).catch(() => ({ items: [] }));
+            ).catch(() => ({ items: [] }));  // Return object with empty items array on error
             
-            const items = Array.isArray(seasonResponse) 
-              ? seasonResponse 
-              : (seasonResponse?.items || []);
+            // Handle different response formats
+            let items = [];
+            if (Array.isArray(seasonResponse)) {
+              items = seasonResponse;
+            } else if (seasonResponse && Array.isArray(seasonResponse.items)) {
+              items = seasonResponse.items;
+            }
             
-            seasonalStats[season].total += items.length;
-            seasonalStats[season].completed += items.filter(item => item.is_completed).length;
+            // Store season data in lowercase keys for consistency with state
+            const seasonKey = season.toLowerCase();
+            seasonalStats[seasonKey].total += items.length;
+            seasonalStats[seasonKey].completed += items.filter(item => item.is_completed).length;
           } catch (error) {
             console.error(`Error fetching ${season} checklist for property ${property.id}:`, error);
+            // Continue with next season
           }
         }
       } catch (error) {
         console.error(`Error fetching data for property ${property.id}:`, error);
+        // Continue with next property
       }
     }
     
@@ -128,7 +137,6 @@ const PropertyHub = () => {
     // Sort upcoming expenses by date
     upcomingExpensesList.sort((a, b) => new Date(a.date) - new Date(b.date));
     setUpcomingExpenses(upcomingExpensesList.slice(0, 5)); // Show top 5
-    
   }, []);
 
   // Fetch expiring appliance warranties
@@ -147,7 +155,7 @@ const PropertyHub = () => {
           const appliancesResponse = await apiHelpers.get(
             '/appliances/',
             { property_id: property.id }
-          );
+          ).catch(() => []);  // Return empty array on error
           
           const appliances = Array.isArray(appliancesResponse) ? appliancesResponse : [];
           
@@ -168,6 +176,7 @@ const PropertyHub = () => {
           ];
         } catch (error) {
           console.error(`Error fetching appliances for property ${property.id}:`, error);
+          // Continue with next property
         }
       }
       
@@ -179,6 +188,8 @@ const PropertyHub = () => {
       setExpiringAppliances(expiringAppliancesList);
     } catch (err) {
       console.error('Error fetching expiring warranties:', err);
+      // Don't throw the error, just log it and continue
+      setExpiringAppliances([]);
     }
   }, []);
 
@@ -208,6 +219,7 @@ const PropertyHub = () => {
     } catch (err) {
       console.error('Error fetching properties:', err);
       setError('Failed to load properties. Please try again later.');
+      setProperties([]); // Set empty array on error
       setLoading(false);
     }
   }, [fetchPropertyMetrics, fetchExpiringWarranties]);
@@ -362,7 +374,7 @@ const PropertyHub = () => {
     : properties.filter(property => property.property_type?.toLowerCase() === activeFilter);
   
   // Calculate seasonal maintenance percentages
-  const currentSeason = getCurrentSeason();
+  const currentSeason = getCurrentSeason().toLowerCase(); // Convert to lowercase for state access
   const seasonalPercentage = seasonalMaintenanceStats[currentSeason].total > 0 
     ? Math.round((seasonalMaintenanceStats[currentSeason].completed / seasonalMaintenanceStats[currentSeason].total) * 100) 
     : 0;
@@ -428,40 +440,6 @@ const PropertyHub = () => {
             </button>
           </div>
         )}
-        
-        {/* Property filters */}
-        <div className="flex overflow-x-auto pb-2 mb-6">
-          <button 
-            className={`mr-2 px-4 py-1 rounded-full text-sm whitespace-nowrap ${activeFilter === 'all' ? 'bg-secondary text-white' : 'bg-gray-700 text-gray-300'}`}
-            onClick={() => setActiveFilter('all')}
-          >
-            All Properties
-          </button>
-          <button 
-            className={`mr-2 px-4 py-1 rounded-full text-sm whitespace-nowrap ${activeFilter === 'residential' ? 'bg-secondary text-white' : 'bg-gray-700 text-gray-300'}`}
-            onClick={() => setActiveFilter('residential')}
-          >
-            Residential
-          </button>
-          <button 
-            className={`mr-2 px-4 py-1 rounded-full text-sm whitespace-nowrap ${activeFilter === 'commercial' ? 'bg-secondary text-white' : 'bg-gray-700 text-gray-300'}`}
-            onClick={() => setActiveFilter('commercial')}
-          >
-            Commercial
-          </button>
-          <button 
-            className={`mr-2 px-4 py-1 rounded-full text-sm whitespace-nowrap ${activeFilter === 'vacation' ? 'bg-secondary text-white' : 'bg-gray-700 text-gray-300'}`}
-            onClick={() => setActiveFilter('vacation')}
-          >
-            Vacation
-          </button>
-          <button 
-            className={`mr-2 px-4 py-1 rounded-full text-sm whitespace-nowrap ${activeFilter === 'land' ? 'bg-secondary text-white' : 'bg-gray-700 text-gray-300'}`}
-            onClick={() => setActiveFilter('land')}
-          >
-            Land
-          </button>
-        </div>
         
         {/* Enhanced Property Dashboard Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -530,7 +508,7 @@ const PropertyHub = () => {
             <h3 className="text-lg font-semibold mb-4">Seasonal Maintenance</h3>
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm capitalize">{currentSeason} Checklist</span>
+                <span className="text-sm capitalize">{getCurrentSeason()} Checklist</span>
                 <span className="text-sm font-medium">{seasonalMaintenanceStats[currentSeason].completed} of {seasonalMaintenanceStats[currentSeason].total} tasks</span>
               </div>
               <div className="w-full bg-gray-700 rounded-full h-2.5">
@@ -585,7 +563,39 @@ const PropertyHub = () => {
             </Link>
           </div>
         </div>
-        
+        {/* Property filters */}
+        <div className="flex overflow-x-auto pb-2 mb-6">
+          <button 
+            className={`mr-2 px-4 py-1 rounded-full text-sm whitespace-nowrap ${activeFilter === 'all' ? 'bg-secondary text-white' : 'bg-gray-700 text-gray-300'}`}
+            onClick={() => setActiveFilter('all')}
+          >
+            All Properties
+          </button>
+          <button 
+            className={`mr-2 px-4 py-1 rounded-full text-sm whitespace-nowrap ${activeFilter === 'residential' ? 'bg-secondary text-white' : 'bg-gray-700 text-gray-300'}`}
+            onClick={() => setActiveFilter('residential')}
+          >
+            Residential
+          </button>
+          <button 
+            className={`mr-2 px-4 py-1 rounded-full text-sm whitespace-nowrap ${activeFilter === 'commercial' ? 'bg-secondary text-white' : 'bg-gray-700 text-gray-300'}`}
+            onClick={() => setActiveFilter('commercial')}
+          >
+            Commercial
+          </button>
+          <button 
+            className={`mr-2 px-4 py-1 rounded-full text-sm whitespace-nowrap ${activeFilter === 'vacation' ? 'bg-secondary text-white' : 'bg-gray-700 text-gray-300'}`}
+            onClick={() => setActiveFilter('vacation')}
+          >
+            Vacation
+          </button>
+          <button 
+            className={`mr-2 px-4 py-1 rounded-full text-sm whitespace-nowrap ${activeFilter === 'land' ? 'bg-secondary text-white' : 'bg-gray-700 text-gray-300'}`}
+            onClick={() => setActiveFilter('land')}
+          >
+            Land
+          </button>
+        </div>
         {/* Properties Grid */}
         {loading ? (
           <div className="text-center py-12">
@@ -921,7 +931,7 @@ const PropertyHub = () => {
                     <div className="text-xs text-gray-400">{appliance.propertyAddress}</div>
                   </div>
                   <div className="text-orange-500 text-sm">
-                    {getTimeToExpiration(appliance.warranty_expiration)}
+                    { getTimeToExpiration(appliance.warranty_expiration)}
                   </div>
                 </div>
               ))}

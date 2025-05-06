@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../layout/Navigation';
 import { apiHelpers } from '../../services/api';
+import PropertyUsers from '../property/PropertyUsers'; 
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ const Settings = () => {
   
   // New state for properties and primary residence
   const [properties, setProperties] = useState([]);
+  const [currentProperty, setCurrentProperty] = useState(null);
   const [primaryResidenceId, setPrimaryResidenceId] = useState('');
   const [loadingProperties, setLoadingProperties] = useState(false);
   
@@ -114,6 +116,10 @@ const Settings = () => {
         const primaryProperty = response.find(property => property.is_primary_residence);
         if (primaryProperty) {
           setPrimaryResidenceId(primaryProperty.id.toString());
+          setCurrentProperty(primaryProperty);
+        } else if (response.length > 0) {
+          // If no primary residence, set the first property as current
+          setCurrentProperty(response[0]);
         }
       }
       
@@ -404,6 +410,19 @@ const Settings = () => {
                   </svg>
                   Property Settings
                 </button>
+
+                {/* New Property Users Tab */}
+                <button
+                  className={`px-4 py-2 rounded-md text-left flex items-center ${
+                    activeTab === 'users' ? 'bg-teal-900 bg-opacity-20 text-teal-500' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
+                  }`}
+                  onClick={() => setActiveTab('users')}
+                >
+                  <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                  </svg>
+                  Property Users
+                </button>
                 
                 <button
                   className={`px-4 py-2 rounded-md text-left flex items-center ${
@@ -653,6 +672,14 @@ const Settings = () => {
                     </div>
                   </form>
                 </div>
+              )}
+
+              {/* New Property Users Tab */}
+              {activeTab === 'users' && (
+                <PropertyUsers 
+                  currentProperty={currentProperty}
+                  setCurrentProperty={setCurrentProperty}
+                />
               )}
               
               {/* Notifications Tab */}

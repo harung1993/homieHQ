@@ -63,7 +63,7 @@ api.interceptors.request.use(
     
     // Ensure all IDs in the request data are strings when needed for JWT
     if (config.method === 'post' && config.url.includes('auth/login')) {
-      console.log('Processing login request:', config.url);
+     
     }
     
     return config;

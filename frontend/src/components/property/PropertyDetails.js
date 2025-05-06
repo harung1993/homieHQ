@@ -12,6 +12,10 @@ const PropertyDetails = () => {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   
+  // New state for tenants
+  const [tenants, setTenants] = useState([]);
+  const [loadingTenants, setLoadingTenants] = useState(false);
+  
   // Property metrics
   const [metrics, setMetrics] = useState({
     maintenanceItems: 0,
@@ -45,11 +49,29 @@ const PropertyDetails = () => {
       setLoading(true);
       const propertyData = await apiHelpers.get(`/properties/${id}`);
       setProperty(propertyData);
+      
+      // Fetch tenants for this property
+      fetchPropertyTenants(id);
+      
       setLoading(false);
     } catch (err) {
       console.error('Error fetching property details:', err);
       setError('Failed to load property details. Please try again later.');
       setLoading(false);
+    }
+  };
+
+  // New function to fetch tenants for the property
+  const fetchPropertyTenants = async (propertyId) => {
+    try {
+      setLoadingTenants(true);
+      const tenantData = await apiHelpers.get('/tenants/', { property_id: propertyId });
+      setTenants(Array.isArray(tenantData) ? tenantData : []);
+      setLoadingTenants(false);
+    } catch (err) {
+      console.error('Error fetching property tenants:', err);
+      setTenants([]);
+      setLoadingTenants(false);
     }
   };
 
@@ -420,6 +442,71 @@ const PropertyDetails = () => {
                   View Documents
                 </Link>
               </div>
+            </div>
+            
+            {/* Tenant Information Section - New Section */}
+            <div className="card p-6 mb-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">Tenant Information</h2>
+                <Link to="/tenants/add" className="btn-secondary text-sm px-3 py-1 rounded-md flex items-center">
+                  <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                  </svg>
+                  Add Tenant
+                </Link>
+              </div>
+              
+              {loadingTenants ? (
+                <div className="text-center py-4">
+                  <svg className="animate-spin h-5 w-5 text-secondary mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              ) : tenants.length > 0 ? (
+                <div className="divide-y divide-gray-700">
+                  {tenants.map(tenant => (
+                    <div key={tenant.id} className="py-4 flex items-center">
+                      <div className="flex-shrink-0 mr-4">
+                        <div className="h-10 w-10 rounded-full bg-gray-600 flex items-center justify-center text-white font-medium">
+                          {tenant.first_name?.[0]}{tenant.last_name?.[0]}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg font-medium">{tenant.first_name} {tenant.last_name}</h3>
+                        <div className="flex flex-col md:flex-row md:space-x-4 text-sm text-gray-400">
+                          <span>{tenant.email || 'No email provided'}</span>
+                          <span>{tenant.phone || 'No phone provided'}</span>
+                          {tenant.unit && <span>Unit: {tenant.unit}</span>}
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 ml-4">
+                        <Link 
+                          to={`/tenants/edit/${tenant.id}`}
+                          className="text-teal-500 hover:text-teal-400 text-sm"
+                        >
+                          View Details
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <svg className="h-16 w-16 text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                  </svg>
+                  <p className="text-gray-400 mb-4">No tenants associated with this property</p>
+                  <Link to="/tenants/add" 
+                    onClick={() => {
+                      localStorage.setItem('currentPropertyId', propertyId);
+                    }}
+                    className="btn-secondary px-4 py-2 rounded-md"
+                  >
+                    Add Tenant
+                  </Link>
+                </div>
+              )}
             </div>
             
             {/* Property Actions */}

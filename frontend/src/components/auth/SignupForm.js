@@ -13,7 +13,10 @@ const SignupForm = () => {
     phone: ''
   });
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState(''); // Stored for resending verification
 
   const handleChange = (e) => {
     setFormData({
@@ -26,6 +29,7 @@ const SignupForm = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setMessage('');
 
     try {
       // Use direct axios with full URL for debugging
@@ -42,8 +46,32 @@ const SignupForm = () => {
       setLoading(false);
       console.log("Registration successful:", response.data);
       
-      // If registration is successful, redirect to login
-      navigate('/login', { state: { message: 'Registration successful! Please login.' } });
+      // Updated to handle email verification flow
+      setMessage(response.data.message || 
+        'Registration successful! Please check your email to verify your account before logging in.');
+      
+      // Store email for potential resending of verification
+      setRegisteredEmail(formData.email);
+      
+      // Clear form fields after successful registration
+      setFormData({
+        email: '',
+        password: '',
+        first_name: '',
+        last_name: '',
+        phone: ''
+      });
+      
+      setRegistrationSuccess(true);
+      
+      // Navigate to login page after a delay (this uses the navigate function)
+      setTimeout(() => {
+        navigate('/login', { 
+          state: { 
+            message: 'Registration successful! Please verify your email before logging in.' 
+          } 
+        });
+      }, 5000);
     } catch (err) {
       setLoading(false);
       console.error('Registration error:', err);
@@ -74,8 +102,48 @@ const SignupForm = () => {
     // Simulate loading
     setTimeout(() => {
       setLoading(false);
-      navigate('/login', { state: { message: 'Development registration successful! Please login.' } });
+      setMessage('Development registration successful! Please check your email for verification instructions.');
+      
+      // Set the registered email for dev mode too
+      setRegisteredEmail('dev@example.com');
+      setRegistrationSuccess(true);
+      
+      // Clear form fields
+      setFormData({
+        email: '',
+        password: '',
+        first_name: '',
+        last_name: '',
+        phone: ''
+      });
+      
+      // Navigate to login page after a delay (uses the navigate function)
+      setTimeout(() => {
+        navigate('/login', { 
+          state: { 
+            message: 'Development registration successful! Please verify your email before logging in.' 
+          } 
+        });
+      }, 2000);
     }, 1000);
+  };
+
+  // Function to handle resend verification email
+  const handleResendVerification = async () => {
+    // Use the stored email if available, otherwise use the current form email
+    const emailToUse = registeredEmail || formData.email;
+    
+    if (!emailToUse) {
+      setError('Please enter your email address to resend verification');
+      return;
+    }
+    
+    // Navigate to the dedicated resend verification page
+    navigate('/resend-verification', { 
+      state: { 
+        email: emailToUse 
+      } 
+    });
   };
 
   return (
@@ -93,6 +161,25 @@ const SignupForm = () => {
         {error && (
           <div className="bg-red-900 bg-opacity-30 text-red-400 p-3 rounded-md mb-4">
             {error}
+          </div>
+        )}
+        
+        {message && (
+          <div className="bg-green-900 bg-opacity-30 text-green-400 p-3 rounded-md mb-4">
+            {message}
+            
+            {/* Show resend verification option if registration was successful */}
+            {registrationSuccess && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  className="text-teal-400 hover:text-teal-300 underline"
+                  onClick={handleResendVerification}
+                >
+                  Resend verification email
+                </button>
+              </div>
+            )}
           </div>
         )}
         
@@ -160,9 +247,9 @@ const SignupForm = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              minLength="6"
+              minLength="8"
             />
-            <p className="text-xs text-gray-400 mt-1">Password must be at least 6 characters</p>
+            <p className="text-xs text-gray-400 mt-1">Password must be at least 8 characters</p>
           </div>
           
           <div className="mt-6">
@@ -193,6 +280,20 @@ const SignupForm = () => {
             <Link to="/login" className="text-secondary hover:text-secondary-light">
               Log in
             </Link>
+          </p>
+        </div>
+        
+        {/* Resend verification link */}
+        <div className="mt-4 text-center">
+          <p className="text-gray-400 text-sm">
+            Didn't receive verification email?{' '}
+            <button
+              type="button"
+              className="text-secondary hover:text-secondary-light text-sm"
+              onClick={handleResendVerification}
+            >
+              Resend verification
+            </button>
           </p>
         </div>
       </div>

@@ -851,21 +851,24 @@ const HomeOwnerDashboard = () => {
                   )}
                   
                   <div className="mt-6">
-                    <button
-                      className="btn-secondary px-4 py-2 rounded-md flex items-center mx-auto"
-                      onClick={triggerFileInput}
-                      disabled={!currentProperty}
-                    >
+                    <label className="btn-secondary px-4 py-2 rounded-md flex items-center mx-auto cursor-pointer">
                       <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                       </svg>
                       Add More Photos
-                    </button>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/jpeg, image/png, image/gif"
+                        onChange={handleFileSelect}
+                        disabled={!currentProperty}
+                      />
+                    </label>
                   </div>
                 </div>
               </div>
             </div>
-          )}
+)}
             
             {/* Home Status Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

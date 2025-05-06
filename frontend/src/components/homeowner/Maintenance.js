@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../layout/Navigation';
 import MaintenanceChecklist from './MaintenanceChecklist';
+import PropertySelector from '../layout/PropertySelector'; // Added PropertySelector import
 import { apiHelpers } from '../../services/api';
 
 const Maintenance = () => {
@@ -36,6 +37,60 @@ const Maintenance = () => {
     return 'Winter';
   };
 
+  // Fetch maintenance items from the API
+  const fetchMaintenanceItems = useCallback(async (propertyId) => {
+    try {
+      setLoading(true);
+      const items = await apiHelpers.get('maintenance/', { property_id: propertyId });
+      setMaintenanceItems(items);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching maintenance items:', err);
+      setError('Failed to load maintenance items. Please try again later.');
+      setLoading(false);
+    }
+  }, []);
+
+  // Break the circular dependency by combining the functions
+  const initializeProperties = useCallback(async () => {
+    try {
+      const properties = await apiHelpers.get('properties/');
+      
+      if (properties && properties.length > 0) {
+        // Get current property from localStorage or use the first one
+        const savedPropertyId = localStorage.getItem('currentPropertyId');
+        let propertyToUse;
+        
+        if (savedPropertyId) {
+          try {
+            const property = await apiHelpers.get(`properties/${savedPropertyId}`);
+            propertyToUse = property;
+          } catch (error) {
+            console.error('Error fetching saved property:', error);
+            propertyToUse = properties[0];
+          }
+        } else {
+          propertyToUse = properties[0];
+        }
+        
+        setCurrentProperty(propertyToUse);
+        
+        // Save to localStorage
+        localStorage.setItem('currentPropertyId', propertyToUse.id);
+        
+        // Fetch maintenance items for this property
+        fetchMaintenanceItems(propertyToUse.id);
+      } else {
+        setLoading(false);
+        setError('No properties found. Please add a property first.');
+      }
+    } catch (err) {
+      console.error('Error fetching properties:', err);
+      setError('Failed to load properties. Please try again later.');
+      setLoading(false);
+    }
+  }, [fetchMaintenanceItems]);
+
   // Fetch user and maintenance items
   useEffect(() => {
     const userString = localStorage.getItem('user');
@@ -49,72 +104,24 @@ const Maintenance = () => {
     const userData = JSON.parse(userString);
     setUser(userData);
     
-    // Get current property from localStorage
-    const savedPropertyId = localStorage.getItem('currentPropertyId');
-    if (savedPropertyId) {
-      fetchCurrentProperty(savedPropertyId);
-    } else {
-      // Fetch first property if no current property set
-      fetchFirstProperty();
-    }
-  }, [navigate]);
+    // Initialize properties and maintenance items
+    initializeProperties();
+  }, [navigate, initializeProperties]);
 
-  // Fetch current property details
-  const fetchCurrentProperty = async (propertyId) => {
-    try {
-      const property = await apiHelpers.get(`properties/${propertyId}`);
-      
-      setCurrentProperty(property);
-      
-      // Fetch maintenance items for this property
-      fetchMaintenanceItems(propertyId);
-    } catch (err) {
-      console.error('Error fetching property:', err);
-      setError('Failed to load property information. Please try again later.');
-      setLoading(false);
-      
-      // Try to fetch first property as fallback
-      fetchFirstProperty();
-    }
-  };
+  // These functions are now defined above using useCallback
 
-  // Fetch first available property
-  const fetchFirstProperty = async () => {
-    try {
-      const properties = await apiHelpers.get('properties/');
-      
-      if (properties && properties.length > 0) {
-        setCurrentProperty(properties[0]);
-        
-        // Save to localStorage
-        localStorage.setItem('currentPropertyId', properties[0].id);
-        
-        // Fetch maintenance items for this property
-        fetchMaintenanceItems(properties[0].id);
-      } else {
-        setLoading(false);
-        setError('No properties found. Please add a property first.');
-      }
-    } catch (err) {
-      console.error('Error fetching properties:', err);
-      setError('Failed to load properties. Please try again later.');
-      setLoading(false);
-    }
-  };
+  // Handle property selection from dropdown
+  const handleSelectProperty = useCallback((property) => {
+    setCurrentProperty(property);
+    
+    // Save to localStorage
+    localStorage.setItem('currentPropertyId', property.id);
+    
+    // Fetch maintenance items for the selected property
+    fetchMaintenanceItems(property.id);
+  }, [fetchMaintenanceItems]);
 
-  // Fetch maintenance items from the API
-  const fetchMaintenanceItems = async (propertyId) => {
-    try {
-      setLoading(true);
-      const items = await apiHelpers.get('maintenance/', { property_id: propertyId });
-      setMaintenanceItems(items);
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching maintenance items:', err);
-      setError('Failed to load maintenance items. Please try again later.');
-      setLoading(false);
-    }
-  };
+  // This function is now defined above using useCallback
 
   // Handle input changes for new maintenance item
   const handleInputChange = (e) => {
@@ -253,7 +260,13 @@ const Maintenance = () => {
             <p className="text-gray-400 mt-1">Keep track of home maintenance tasks and seasonal checklists</p>
           </div>
           
-          <div className="mt-4 md:mt-0 flex gap-4">
+          <div className="mt-4 md:mt-0 flex items-center gap-4">
+            {/* Added PropertySelector component */}
+            <PropertySelector 
+              currentProperty={currentProperty} 
+              onSelectProperty={handleSelectProperty} 
+            />
+            
             {activeTab === 'items' && (
               <button 
                 className="btn-secondary text-sm px-4 py-2 rounded-md flex items-center"
