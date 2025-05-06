@@ -10,3 +10,5 @@ from app.models.project import Project
 from app.models.finance import Expense, Budget
 from app.models.settings import Settings
 from app.models.tenant import Tenant
+from app.models.Property_user import PropertyUser
+from app.models.pending_invitation import PendingInvitation

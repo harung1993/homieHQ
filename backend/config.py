@@ -33,9 +33,18 @@ class Config:
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
-    # In Docker, we'll use PostgreSQL for development too
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://propertypal:propertypal@db:5432/propertypal'
+    
+    # Check if we're running in Docker or local environment
+    if os.environ.get('IN_DOCKER'):
+        # In Docker, use the Docker service name
+        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+            'postgresql://propertypal:propertypal@db:5432/propertypal'
+    else:
+        # In local environment, use SQLite
+        basedir = os.path.abspath(os.path.dirname(__file__))
+        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+            'sqlite:///' + os.path.join(basedir, 'app.db')
+    
     # Use local file storage instead of S3 in development
     USE_S3 = False
 

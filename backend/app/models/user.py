@@ -25,6 +25,13 @@ class User(db.Model):
     expenses = db.relationship('Expense', back_populates='user', cascade='all, delete-orphan')
     budgets = db.relationship('Budget', back_populates='user', cascade='all, delete-orphan')
     settings = db.relationship('Settings', back_populates='user', uselist=False, cascade='all, delete-orphan')
+    reset_token = db.Column(db.String(255), nullable=True)  
+    reset_token_expiry = db.Column(db.DateTime, nullable=True) 
+    email_verified = db.Column(db.Boolean, default=False)
+    verification_token = db.Column(db.String(255), nullable=True)
+    verification_token_expiry = db.Column(db.DateTime, nullable=True) 
+    property_associations = db.relationship('PropertyUser', foreign_keys='PropertyUser.user_id', 
+                                       back_populates='user', cascade='all, delete-orphan')
     @property
     def password(self):
         raise AttributeError('password is not a readable attribute')

@@ -3,6 +3,7 @@ from flask import Flask, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
+from flask_mail import Mail
 from flask_migrate import Migrate
 from config import Config
 import os
@@ -11,6 +12,7 @@ import os
 db = SQLAlchemy()
 jwt = JWTManager()
 migrate = Migrate()
+mail = Mail()
 
 def create_app(config_class=Config):
     
@@ -49,18 +51,18 @@ def create_app(config_class=Config):
     }})'''
 
     allowed_origins = os.environ.get('CORS_ALLOWED_ORIGINS', 
-                               'http://localhost:3000,http://localhost:3002,http://frontend:3000')
+                               'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://frontend:3000')
     origins = allowed_origins.split(',')
     print(f"CORS allowing origins: {origins}")
-
     CORS(app, resources={r"/*": {
-        "origins": origins,
-        "supports_credentials": True,
-        "allow_headers": ["Content-Type", "Authorization"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    "origins": origins,
+    "supports_credentials": True,
+    "allow_headers": ["Content-Type", "Authorization"],
+    "expose_headers": ["Content-Type", "Authorization"],  # Add this line
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     }})
+    mail.init_app(app)
 
-    
     # Create upload directories - use the configured upload folder
     upload_documents_path = os.path.join(app.config['UPLOAD_FOLDER'], 'documents')
     upload_photos_path = os.path.join(app.config['UPLOAD_FOLDER'], 'documents/photos')
@@ -85,6 +87,7 @@ def create_app(config_class=Config):
     from app.api.users import users_bp
     from app.api.settings import settings_bp
     from app.api.tenants import tenants_bp
+    from app.api.property_users import property_users_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(properties_bp, url_prefix='/api/properties')
@@ -98,5 +101,6 @@ def create_app(config_class=Config):
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(settings_bp, url_prefix='/api/settings')
     app.register_blueprint(tenants_bp, url_prefix='/api/tenants')
+    app.register_blueprint(property_users_bp, url_prefix='/api/property-users')
     return app
 

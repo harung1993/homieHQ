@@ -8,7 +8,7 @@ from config import DevelopmentConfig, ProductionConfig
 
 # Set environment variable for Flask
 os.environ['FLASK_APP'] = 'run.py'
-
+os.environ['IN_DOCKER'] = '0'
 # Only set SQLite path if no DATABASE_URL is provided
 if 'DATABASE_URL' not in os.environ and 'SQLALCHEMY_DATABASE_URI' not in os.environ:
     os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dev.db'

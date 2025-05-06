@@ -33,6 +33,7 @@ class Property(db.Model):
     expenses = db.relationship('Expense', back_populates='property', cascade='all, delete-orphan')
     budgets = db.relationship('Budget', back_populates='property', cascade='all, delete-orphan')
     is_primary_residence = db.Column(db.Boolean, default=False)
+    property_users = db.relationship('PropertyUser', back_populates='property', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<Property {self.id}: {self.address}>'

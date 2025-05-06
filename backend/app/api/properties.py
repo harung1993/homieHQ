@@ -2,7 +2,9 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.property import Property
 from app.models.user import User
+from app.models.Property_user import PropertyUser
 from app import db
+from datetime import datetime
 
 properties_bp = Blueprint('properties', __name__)
 
@@ -16,26 +18,42 @@ def get_properties():
     if not user:
         return jsonify({"error": "User not found"}), 404
     
-    properties = Property.query.filter_by(user_id=current_user_id).all()
+    # Get property associations for this user
+    property_associations = PropertyUser.query.filter_by(
+        user_id=current_user_id,
+        status='active'
+    ).all()
+    
+    property_ids = [assoc.property_id for assoc in property_associations]
+    
+    # Get all properties based on associations
+    properties = Property.query.filter(Property.id.in_(property_ids)).all()
     
     # Convert properties to JSON format
-    properties_data = [{
-        'id': prop.id,
-        'address': prop.address,
-        'city': prop.city,
-        'state': prop.state,
-        'zip': prop.zip,
-        'property_type': prop.property_type,
-        'status': prop.status,
-        'purchase_date': prop.purchase_date.isoformat() if prop.purchase_date else None,
-        'purchase_price': prop.purchase_price,
-        'current_value': prop.current_value,
-        'bedrooms': prop.bedrooms,
-        'bathrooms': prop.bathrooms,
-        'square_footage': prop.square_footage,
-        'is_primary_residence': prop.is_primary_residence,
-        'created_at': prop.created_at.isoformat()
-    } for prop in properties]
+    properties_data = []
+    for prop in properties:
+        # Get the user's role for this property
+        association = next((a for a in property_associations if a.property_id == prop.id), None)
+        role = association.role if association else None
+        
+        properties_data.append({
+            'id': prop.id,
+            'address': prop.address,
+            'city': prop.city,
+            'state': prop.state,
+            'zip': prop.zip,
+            'property_type': prop.property_type,
+            'status': prop.status,
+            'purchase_date': prop.purchase_date.isoformat() if prop.purchase_date else None,
+            'purchase_price': prop.purchase_price,
+            'current_value': prop.current_value,
+            'bedrooms': prop.bedrooms,
+            'bathrooms': prop.bathrooms,
+            'square_footage': prop.square_footage,
+            'is_primary_residence': prop.is_primary_residence,
+            'created_at': prop.created_at.isoformat(),
+            'role': role  # Add user's role for this property
+        })
     
     return jsonify(properties_data), 200
 
@@ -74,6 +92,17 @@ def create_property():
     db.session.add(new_property)
     db.session.commit()
     
+    # After creating the property, make the current user an owner
+    property_user = PropertyUser(
+        property_id=new_property.id,
+        user_id=current_user_id,
+        role='owner',
+        status='active',
+        accepted_at=datetime.utcnow()
+    )
+    db.session.add(property_user)
+    db.session.commit()
+    
     return jsonify({
         'id': new_property.id,
         'address': new_property.address,
@@ -85,13 +114,22 @@ def create_property():
 def get_property(property_id):
     """Get a specific property by ID"""
     current_user_id = int(get_jwt_identity())
-
+    
+    # Check if user has access to this property through PropertyUser
+    property_user = PropertyUser.query.filter_by(
+        property_id=property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user:
+        return jsonify({"error": "Property not found or you don't have permission to access it"}), 404
     
     # Find the property
-    property = Property.query.filter_by(id=property_id, user_id=current_user_id).first()
+    property = Property.query.get(property_id)
     
     if not property:
-        return jsonify({"error": "Property not found or you don't have permission to access it"}), 404
+        return jsonify({"error": "Property not found"}), 404
     
     # Convert property to JSON format
     property_data = {
@@ -108,7 +146,8 @@ def get_property(property_id):
         'bedrooms': property.bedrooms,
         'bathrooms': property.bathrooms,
         'square_footage': property.square_footage,
-        'created_at': property.created_at.isoformat()
+        'created_at': property.created_at.isoformat(),
+        'role': property_user.role  # Add user's role for this property
     }
     
     return jsonify(property_data), 200
@@ -118,14 +157,24 @@ def get_property(property_id):
 def update_property(property_id):
     """Update an existing property"""
     current_user_id = int(get_jwt_identity())
-
+    
+    # Check if user has permission to update this property
+    property_user = PropertyUser.query.filter_by(
+        property_id=property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to update this property"}), 403
+    
     data = request.get_json()
     
     # Find the property
-    property = Property.query.filter_by(id=property_id, user_id=current_user_id).first()
+    property = Property.query.get(property_id)
     
     if not property:
-        return jsonify({"error": "Property not found or you don't have permission to update it"}), 404
+        return jsonify({"error": "Property not found"}), 404
     
     # Update property fields if provided in the request
     if 'address' in data:
@@ -167,14 +216,28 @@ def update_property(property_id):
 def delete_property(property_id):
     """Delete a property"""
     current_user_id = int(get_jwt_identity())
-
+    
+    # Check if user has permission to delete this property
+    property_user = PropertyUser.query.filter_by(
+        property_id=property_id,
+        user_id=current_user_id,
+        status='active',
+        role='owner'  # Only owners can delete properties
+    ).first()
+    
+    if not property_user:
+        return jsonify({"error": "Property not found or you don't have permission to delete it"}), 403
     
     # Find the property
-    property = Property.query.filter_by(id=property_id, user_id=current_user_id).first()
+    property = Property.query.get(property_id)
     
     if not property:
-        return jsonify({"error": "Property not found or you don't have permission to delete it"}), 404
+        return jsonify({"error": "Property not found"}), 404
     
+    # Delete all property user associations first
+    PropertyUser.query.filter_by(property_id=property_id).delete()
+    
+    # Then delete the property
     db.session.delete(property)
     db.session.commit()
     
@@ -183,21 +246,39 @@ def delete_property(property_id):
     }), 200
 
 
-
 @properties_bp.route('/<int:property_id>/set-primary', methods=['POST'])
 @jwt_required()
 def set_primary_residence(property_id):
     """Set a property as primary residence"""
     current_user_id = int(get_jwt_identity())
-
     
-    # Find the property
-    property = Property.query.filter_by(id=property_id, user_id=current_user_id).first()
-    if not property:
+    # Check if user has access to this property
+    property_user = PropertyUser.query.filter_by(
+        property_id=property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user:
         return jsonify({"error": "Property not found or access denied"}), 404
     
+    # Find the property
+    property = Property.query.get(property_id)
+    
+    if not property:
+        return jsonify({"error": "Property not found"}), 404
+    
     # Clear any existing primary residence
-    properties = Property.query.filter_by(user_id=current_user_id, is_primary_residence=True).all()
+    user_property_ids = [pu.property_id for pu in PropertyUser.query.filter_by(
+        user_id=current_user_id,
+        status='active'
+    ).all()]
+    
+    properties = Property.query.filter(
+        Property.id.in_(user_property_ids),
+        Property.is_primary_residence == True
+    ).all()
+    
     for prop in properties:
         prop.is_primary_residence = False
     
