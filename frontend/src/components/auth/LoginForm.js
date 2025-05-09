@@ -1,4 +1,4 @@
-// Updated LoginForm.js with "Forgot Password?" link
+// Updated LoginForm.js with prominent resend verification option and no dev mode button
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import api from '../../services/api';
@@ -67,7 +67,16 @@ const LoginForm = () => {
       setLoading(false);
       console.error('Login error:', err);
       
-      if (err.message === 'Network Error') {
+      // Check if the error indicates email verification is needed
+      const errorMessage = err.response?.data?.error || '';
+      const needsVerification = 
+        errorMessage.toLowerCase().includes('verify') ||
+        errorMessage.toLowerCase().includes('verification') ||
+        errorMessage.toLowerCase().includes('verified');
+      
+      if (needsVerification) {
+        setError('Please verify your email address before logging in.');
+      } else if (err.message === 'Network Error') {
         setError('Cannot connect to the server. Please check if the backend server is running and properly configured for CORS.');
       } else if (err.response) {
         // The server responded with a status code outside the 2xx range
@@ -86,33 +95,11 @@ const LoginForm = () => {
     }
   };
 
-  // For development purposes, this function simulates a successful login
-  // Use this if your backend is not yet fully implemented or having CORS issues
-  const handleDevelopmentLogin = () => {
-    setLoading(true);
-    
-    // Create mock user data
-    const mockUser = {
-      id: 1,
-      email: formData.email || 'test@example.com',
-      first_name: 'Test',
-      last_name: 'User',
-      email_verified: true
-    };
-    
-    // Create mock token
-    const mockToken = 'mock-jwt-token-for-development';
-    
-    // Store mock data in localStorage
-    localStorage.setItem('accessToken', mockToken);
-    localStorage.setItem('refreshToken', mockToken);
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    
-    // Simulate loading
-    setTimeout(() => {
-      setLoading(false);
-      navigate('/landing');
-    }, 1000);
+  // Handle resend verification email
+  const handleResendVerification = () => {
+    navigate('/resend-verification', {
+      state: { email: formData.email }
+    });
   };
 
   return (
@@ -130,6 +117,17 @@ const LoginForm = () => {
         {error && (
           <div className="bg-red-900 bg-opacity-30 text-red-400 p-3 rounded-md mb-4">
             {error}
+            {error.toLowerCase().includes('verify') && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1 rounded-md text-sm"
+                  onClick={handleResendVerification}
+                >
+                  Resend verification email
+                </button>
+              </div>
+            )}
           </div>
         )}
         
@@ -193,16 +191,21 @@ const LoginForm = () => {
           </p>
         </div>
         
-        {/* For development/debugging purposes */}
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            className="text-xs text-gray-400 underline"
-            onClick={handleDevelopmentLogin}
-          >
-            Use Development Mode
-          </button>
-        </div>
+        {/* Only show resend option when there's a verification error */}
+        {error && error.toLowerCase().includes('verify') && (
+          <div className="mt-4 text-center border-t border-gray-700 pt-4">
+            <p className="text-gray-400 text-sm">
+              Didn't receive verification email?{' '}
+              <button
+                type="button"
+                className="text-secondary hover:text-secondary-light text-sm"
+                onClick={handleResendVerification}
+              >
+                Resend verification
+              </button>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

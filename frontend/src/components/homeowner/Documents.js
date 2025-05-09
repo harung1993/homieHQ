@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Navigation from '../layout/Navigation';
 import PropertySelector from '../layout/PropertySelector';
@@ -28,6 +28,67 @@ const Documents = () => {
     property_id: '',
     file: null
   });
+  
+  // Fetch property documents - wrapped in useCallback
+  const fetchPropertyDocuments = useCallback(async (propertyId) => {
+    try {
+      setLoading(true);
+      const data = await documentService.getAllDocuments(propertyId);
+      setDocuments(data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching property documents:', err);
+      setError('Failed to load property documents. Please try again later.');
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch all tenant documents - wrapped in useCallback
+  const fetchAllTenantDocuments = useCallback(async (tenantsList) => {
+    try {
+      const allTenantDocs = [];
+      
+      // Process each tenant sequentially to avoid too many parallel requests
+      for (const tenant of tenantsList) {
+        try {
+          const docs = await tenantService.getTenantDocuments(tenant.id);
+          
+          // Add tenant info to each document
+          const docsWithTenantInfo = docs.map(doc => ({
+            ...doc,
+            tenant_id: tenant.id,
+            tenant_name: `${tenant.first_name} ${tenant.last_name}`,
+            source: 'tenant'
+          }));
+          
+          allTenantDocs.push(...docsWithTenantInfo);
+        } catch (err) {
+          console.error(`Error fetching documents for tenant ${tenant.id}:`, err);
+          // Continue with next tenant even if one fails
+        }
+      }
+      
+      setTenantDocuments(allTenantDocs);
+    } catch (err) {
+      console.error('Error fetching tenant documents:', err);
+    }
+  }, []);
+
+  // Fetch property tenants - wrapped in useCallback
+  const fetchPropertyTenants = useCallback(async (propertyId) => {
+    try {
+      const data = await tenantService.getTenantsForProperty(propertyId);
+      setTenants(data);
+      
+      // If we have tenants, fetch their documents too
+      if (data && data.length > 0) {
+        fetchAllTenantDocuments(data);
+      }
+    } catch (err) {
+      console.error('Error fetching property tenants:', err);
+      // Don't set error for tenant data, it's not critical
+    }
+  }, [fetchAllTenantDocuments]);
   
   // Get current user from local storage
   useEffect(() => {
@@ -79,10 +140,10 @@ const Documents = () => {
     };
     
     fetchProperties();
-  }, [navigate]);
+  }, [navigate, fetchPropertyDocuments, fetchPropertyTenants]); 
 
   // Handle property selection from dropdown
-  const handleSelectProperty = (property) => {
+  const handleSelectProperty = useCallback((property) => {
     setCurrentProperty(property);
     
     // Save to localStorage
@@ -91,69 +152,8 @@ const Documents = () => {
     // Fetch documents and tenants for the selected property
     fetchPropertyDocuments(property.id);
     fetchPropertyTenants(property.id);
-  };
+  }, [fetchPropertyDocuments, fetchPropertyTenants]);
 
-  // Fetch property documents
-  const fetchPropertyDocuments = async (propertyId) => {
-    try {
-      setLoading(true);
-      const data = await documentService.getAllDocuments(propertyId);
-      setDocuments(data);
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching property documents:', err);
-      setError('Failed to load property documents. Please try again later.');
-      setLoading(false);
-    }
-  };
-
-  // Fetch property tenants
-  const fetchPropertyTenants = async (propertyId) => {
-    try {
-      const data = await tenantService.getTenantsForProperty(propertyId);
-      setTenants(data);
-      
-      // If we have tenants, fetch their documents too
-      if (data && data.length > 0) {
-        fetchAllTenantDocuments(data);
-      }
-    } catch (err) {
-      console.error('Error fetching property tenants:', err);
-      // Don't set error for tenant data, it's not critical
-    }
-  };
-
-  // Fetch documents for all tenants
-  const fetchAllTenantDocuments = async (tenantsList) => {
-    try {
-      const allTenantDocs = [];
-      
-      // Process each tenant sequentially to avoid too many parallel requests
-      for (const tenant of tenantsList) {
-        try {
-          const docs = await tenantService.getTenantDocuments(tenant.id);
-          
-          // Add tenant info to each document
-          const docsWithTenantInfo = docs.map(doc => ({
-            ...doc,
-            tenant_id: tenant.id,
-            tenant_name: `${tenant.first_name} ${tenant.last_name}`,
-            source: 'tenant'
-          }));
-          
-          allTenantDocs.push(...docsWithTenantInfo);
-        } catch (err) {
-          console.error(`Error fetching documents for tenant ${tenant.id}:`, err);
-          // Continue with next tenant even if one fails
-        }
-      }
-      
-      setTenantDocuments(allTenantDocs);
-    } catch (err) {
-      console.error('Error fetching tenant documents:', err);
-    }
-  };
-  
   // Filter documents based on current filter and document type
   const getFilteredDocuments = () => {
     // Determine which document set to use
@@ -178,11 +178,71 @@ const Documents = () => {
   
   const filteredDocuments = getFilteredDocuments();
 
-  // Handle file upload
+  // Get document URL with proper formatting - UPDATED FOR PROPERTY PHOTOS
+  const getDocumentUrl = (document) => {
+    if (!document || !document.url) return null;
+    
+    // If it's already a full URL, return it as is
+    if (document.url.startsWith('http')) {
+      return document.url;
+    }
+    
+    // Clean up API_BASE_URL to avoid double slashes
+    const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+    
+
+    // Check if this is a property photo by category or title
+    const isPropertyPhoto = document.category === 'property_photo' || 
+                           document.title === 'Home Exterior' ||
+                           (document.description && document.description.toLowerCase().includes('property photo'));
+    
+    if (isPropertyPhoto) {
+      // Extract property ID from the document or use current property
+      const propertyId = document.property_id || currentProperty?.id;
+
+      
+      // Specific path for property photos
+      // Clean the URL by removing any leading slashes and any uploads path
+      const fileName = document.url
+        .replace(/^\/+/, '')                     // Remove leading slashes
+        .replace(/^uploads\//, '')              // Remove uploads/ prefix if present
+        .replace(/^documents\/files\/property_\d+\//, '') // Remove documents/files/property_X/ if present
+        .replace(/^documents\/photos\/property_\d+\//, ''); // Remove documents/photos/property_X/ if present
+      
+      const photoUrl = `${baseUrl}/uploads/documents/photos/property_${propertyId}/${fileName}`;
+
+      return photoUrl;
+    }
+    
+    // Regular document URL construction for non-property photos
+    let documentUrl;
+    // Clean URL by removing leading slashes
+    const cleanUrl = document.url.replace(/^\/+/, '');
+    
+    // If URL already includes uploads path
+    if (cleanUrl.includes('uploads/')) {
+      documentUrl = `${baseUrl}/${cleanUrl}`;
+    } else {
+      // Add proper path structure
+      documentUrl = `${baseUrl}/uploads/documents/files/property_${document.property_id || currentProperty?.id}/${cleanUrl}`;
+    }
+    
+    //console.log('Constructed regular document URL:', documentUrl);
+    return documentUrl;
+  };
+
+  // Handle file upload with size validation
   const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    
+    if (file && file.size > 200 * 1024 * 1024) { // 200MB limit
+      setError('File size exceeds the maximum limit of 200MB');
+      return;
+    }
+    
     setUploadData({
       ...uploadData,
-      file: e.target.files[0]
+      file: file
     });
   };
   
@@ -220,7 +280,20 @@ const Documents = () => {
           formData.append('property_id', currentProperty.id);
         }
         
-        await documentService.uploadDocument(formData);
+        // Special handling for property photos
+        if (uploadData.category === 'property_photo') {
+          // If you have a separate endpoint for property photos, use it here
+          // For example:
+          // await apiHelpers.upload('property_photos/', formData);
+          
+          // If using the same endpoint but need to indicate it's a photo
+          formData.append('is_photo', 'true');
+          
+          await documentService.uploadDocument(formData);
+        } else {
+          // Regular document upload
+          await documentService.uploadDocument(formData);
+        }
         
         // Reload property documents
         if (currentProperty) {
@@ -262,30 +335,49 @@ const Documents = () => {
     }
   };
   
-  // Handle document download
+  // Handle document download - Updated to handle property photos correctly
   const handleDownload = async (document) => {
     try {
       setLoading(true);
       
-      if (document.source === 'tenant') {
-        // Download tenant document through tenant service
-        // In a real implementation, this would use tenantService.downloadTenantDocument()
-        console.log(`Downloading tenant document ${document.id} for tenant ${document.tenant_id}`);
-        setMessage('Tenant document downloaded successfully!');
-      } else {
-        // Download property document through document service
-        const url = await documentService.downloadDocument(document.id);
+      // Check if document has the url property
+      if (document.url) {
+        // Get full URL with API base (handles property photos differently)
+        const documentUrl = getDocumentUrl(document);
+        //console.log('Downloading from URL:', documentUrl);
         
         // Create temporary link for download
         const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', 'document');
+        link.href = documentUrl;
+        link.setAttribute('download', document.title || 'document');
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
+        setMessage('Document downloaded successfully!');
+        setLoading(false);
+      } else {
+        // Fallback for documents without url property
+        if (document.source === 'tenant') {
+          // Download tenant document through tenant service
+          //console.log(`Downloading tenant document ${document.id} for tenant ${document.tenant_id}`);
+          setMessage('Tenant document downloaded successfully!');
+          setLoading(false);
+        } else {
+          // Download property document through document service
+          const url = await documentService.downloadDocument(document.id);
+          
+          // Create temporary link for download
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', document.title || 'document');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          setLoading(false);
+        }
       }
-      
-      setLoading(false);
     } catch (err) {
       console.error('Error downloading document:', err);
       setError('Failed to download document. Please try again later.');
@@ -308,8 +400,20 @@ const Documents = () => {
           if (tenants.length > 0) {
             await fetchAllTenantDocuments(tenants);
           }
+        } else if (document.category === 'property_photo') {
+          // Use property photo deletion endpoint if available
+          // For example: await apiHelpers.delete(`property_photos/${document.id}`);
+          
+          // If using the same endpoint for all documents
+          await documentService.deleteDocument(document.id);
+          setMessage('Property photo deleted successfully!');
+          
+          // Reload property documents
+          if (currentProperty) {
+            await fetchPropertyDocuments(currentProperty.id);
+          }
         } else {
-          // Delete property document through document service
+          // Delete regular property document
           await documentService.deleteDocument(document.id);
           setMessage('Document deleted successfully!');
           
@@ -477,6 +581,12 @@ const Documents = () => {
               // Property document categories
               <>
                 <button 
+                  className={`mr-2 px-4 py-1 rounded-full text-sm whitespace-nowrap ${filter === 'property_photo' ? 'bg-secondary text-white' : 'bg-gray-700 text-gray-300'}`}
+                  onClick={() => setFilter('property_photo')}
+                >
+                  Property Photos
+                </button>
+                <button 
                   className={`mr-2 px-4 py-1 rounded-full text-sm whitespace-nowrap ${filter === 'insurance' ? 'bg-secondary text-white' : 'bg-gray-700 text-gray-300'}`}
                   onClick={() => setFilter('insurance')}
                 >
@@ -626,6 +736,15 @@ const Documents = () => {
                           </span>
                         </div>
                       )}
+                      
+                      {/* Show property photo badge */}
+                      {doc.category === 'property_photo' && (
+                        <div className="mt-1 text-xs">
+                          <span className="px-2 py-0.5 rounded-full bg-purple-900 bg-opacity-20 text-purple-400">
+                            Property Photo
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -637,17 +756,30 @@ const Documents = () => {
                   <div className="flex justify-between text-xs text-gray-400 mb-4">
                     <span>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'Unknown date'}</span>
                     <span className="px-2 py-0.5 rounded-full bg-gray-700">
-                      {doc.category ? doc.category.charAt(0).toUpperCase() + doc.category.slice(1) : 'Other'}
+                      {doc.category ? doc.category.charAt(0).toUpperCase() + doc.category.slice(1).replace('_', ' ') : 'Other'}
                     </span>
                   </div>
                   
                   <div className="flex justify-between mt-4">
-                    <button 
-                      className="text-secondary hover:text-secondary-light text-sm"
-                      onClick={() => handleDownload(doc)}
-                    >
-                      Download
-                    </button>
+                    {/* Use the URL directly if available */}
+                    {doc.url ? (
+                      <a 
+                        href={getDocumentUrl(doc)}
+                        className="text-secondary hover:text-secondary-light text-sm"
+                        download={doc.title}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Download
+                      </a>
+                    ) : (
+                      <button 
+                        className="text-secondary hover:text-secondary-light text-sm"
+                        onClick={() => handleDownload(doc)}
+                      >
+                        Download
+                      </button>
+                    )}
                     
                     {doc.source === 'tenant' ? (
                       <Link 
@@ -736,8 +868,9 @@ const Documents = () => {
                       required
                     >
                       {docType === 'property' ? (
-                        // Property document categories
+                        // Property document categories - ADDED PROPERTY_PHOTO
                         <>
+                          <option value="property_photo">Property Photo</option>
                           <option value="insurance">Insurance</option>
                           <option value="legal">Legal</option>
                           <option value="financial">Financial</option>
@@ -789,6 +922,11 @@ const Documents = () => {
                         </div>
                       )}
                     </div>
+                    {uploadData.category === 'property_photo' && (
+                      <p className="text-xs text-gray-400 mt-2">
+                        Note: Property photos will be stored in a special location and displayed in your property gallery.
+                      </p>
+                    )}
                   </div>
                   
                   <div className="flex justify-end">

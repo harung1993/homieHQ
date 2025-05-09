@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
 import Navigation from '../layout/Navigation';
 import PropertySelector from '../layout/PropertySelector';
 import tenantService from '../services/tenantService';
+import { apiHelpers, API_BASE_URL } from '../../services/api';
 
 const TenantForm = () => {
   const navigate = useNavigate();
@@ -50,6 +50,62 @@ const TenantForm = () => {
     notes: ''
   });
 
+  // Fetch tenant data for edit mode - wrapped in useCallback
+  const fetchTenantData = useCallback(async (id) => {
+    try {
+      const tenant = await tenantService.getTenant(id);
+      
+      // Format dates to YYYY-MM-DD for input fields
+      const formatDateForInput = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toISOString().split('T')[0];
+      };
+      
+      // Update form data with tenant info
+      setFormData({
+        property_id: tenant.property_id || '',
+        first_name: tenant.first_name || '',
+        last_name: tenant.last_name || '',
+        email: tenant.email || '',
+        phone: tenant.phone || '',
+        status: tenant.status || 'active',
+        address: tenant.address || '',
+        address2: tenant.address2 || '',
+        city: tenant.city || '',
+        state: tenant.state || '',
+        zip: tenant.zip || '',
+        lease_start: formatDateForInput(tenant.lease_start),
+        lease_end: formatDateForInput(tenant.lease_end),
+        rent_amount: tenant.rent_amount || '',
+        security_deposit: tenant.security_deposit || '',
+        unit: tenant.unit || '',
+        notes: tenant.notes || ''
+      });
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching tenant details:', err);
+      setError('Failed to load tenant details. Please try again later.');
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch tenant documents - wrapped in useCallback
+  const fetchTenantDocuments = useCallback(async (id) => {
+    try {
+      const docs = await tenantService.getTenantDocuments(id);
+      setDocuments(docs);
+      // Show documents section if there are any documents
+      if (docs.length > 0) {
+        setShowDocumentsSection(true);
+      }
+    } catch (err) {
+      console.error('Error fetching tenant documents:', err);
+      // Don't set an error, just log it - documents are not critical for the form
+    }
+  }, []);
+
   // Get current user from local storage
   useEffect(() => {
     const userString = localStorage.getItem('user');
@@ -65,13 +121,8 @@ const TenantForm = () => {
     // Get current property from localStorage
     const fetchProperties = async () => {
       try {
-        const response = await axios.get('http://localhost:5008/api/properties/', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        const fetchedProperties = response.data || [];
+        // Use apiHelpers instead of direct axios call
+        const fetchedProperties = await apiHelpers.get('properties/');
         
         if (fetchedProperties.length > 0) {
           // Get current property from localStorage or use the first one
@@ -111,62 +162,20 @@ const TenantForm = () => {
     };
     
     fetchProperties();
-  }, [navigate, tenantId, isEditMode]);
+  }, [navigate, tenantId, isEditMode, fetchTenantData, fetchTenantDocuments]);
 
-  // Fetch tenant data for edit mode
-  const fetchTenantData = async (id) => {
-    try {
-      const tenant = await tenantService.getTenant(id);
-      
-      // Format dates to YYYY-MM-DD for input fields
-      const formatDateForInput = (dateString) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        return date.toISOString().split('T')[0];
-      };
-      
-      // Update form data with tenant info
-      setFormData({
-        property_id: tenant.property_id || '',
-        first_name: tenant.first_name || '',
-        last_name: tenant.last_name || '',
-        email: tenant.email || '',
-        phone: tenant.phone || '',
-        status: tenant.status || 'active',
-        address: tenant.address || '',
-        address2: tenant.address2 || '',
-        city: tenant.city || '',
-        state: tenant.state || '',
-        zip: tenant.zip || '',
-        lease_start: formatDateForInput(tenant.lease_start),
-        lease_end: formatDateForInput(tenant.lease_end),
-        rent_amount: tenant.rent_amount || '',
-        security_deposit: tenant.security_deposit || '',
-        unit: tenant.unit || '',
-        notes: tenant.notes || ''
-      });
-      
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching tenant details:', err);
-      setError('Failed to load tenant details. Please try again later.');
-      setLoading(false);
+  // Get document URL with proper formatting
+  const getDocumentUrl = (document) => {
+    if (!document || !document.url) return null;
+    
+    // If it's already a full URL, return it as is
+    if (document.url.startsWith('http')) {
+      return document.url;
     }
-  };
-
-  // Fetch tenant documents
-  const fetchTenantDocuments = async (id) => {
-    try {
-      const docs = await tenantService.getTenantDocuments(id);
-      setDocuments(docs);
-      // Show documents section if there are any documents
-      if (docs.length > 0) {
-        setShowDocumentsSection(true);
-      }
-    } catch (err) {
-      console.error('Error fetching tenant documents:', err);
-      // Don't set an error, just log it - documents are not critical for the form
-    }
+    
+    // Ensure the URL starts with a slash if needed
+    const formattedUrl = document.url.startsWith('/') ? document.url : `/${document.url}`;
+    return `${API_BASE_URL}${formattedUrl}`;
   };
 
   // Handle property selection from dropdown
@@ -210,11 +219,18 @@ const TenantForm = () => {
     });
   };
 
-  // Handle document file selection
+  // Handle document file selection with size validation
   const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    
+    if (file && file.size > 200 * 1024 * 1024) { // 200MB limit
+      setError('File size exceeds the maximum limit of 200MB');
+      return;
+  }
+    
     setDocumentData({
       ...documentData,
-      file: e.target.files[0]
+      file: file
     });
   };
 
@@ -274,6 +290,11 @@ const TenantForm = () => {
     
     if (!documentData.file) {
       setError('Please select a file to upload');
+      return;
+    }
+    
+    if (documentData.file.size > 200 * 1024 * 1024) { // 5MB limit
+      setError('File size exceeds the maximum limit of 20MB');
       return;
     }
     
@@ -777,6 +798,7 @@ const TenantForm = () => {
                               ref={fileInputRef}
                             />
                           </label>
+                          <p className="text-xs text-gray-500 mt-1">Maximum file size: 200MB</p>
                         </div>
                       )}
                     </div>
@@ -810,6 +832,18 @@ const TenantForm = () => {
                                 <span>
                                   {doc.category?.charAt(0).toUpperCase() + doc.category?.slice(1) || 'Other'}
                                 </span>
+                                {/* Download link if document has URL */}
+                                {doc.url && (
+                                  <a 
+                                    href={getDocumentUrl(doc)}
+                                    className="text-blue-400 hover:text-blue-300 mr-2"
+                                    download={doc.title}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    Download
+                                  </a>
+                                )}
                                 <button 
                                   type="button" 
                                   className="text-red-400 hover:text-red-300"

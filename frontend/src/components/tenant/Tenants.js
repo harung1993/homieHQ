@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate} from 'react-router-dom';
-import axios from 'axios';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navigation from '../layout/Navigation';
 import PropertySelector from '../layout/PropertySelector';
 import tenantService from '../services/tenantService';
+import { apiHelpers } from '../../services/api';
 
 const Tenants = () => {
   const navigate = useNavigate();
@@ -15,9 +15,22 @@ const Tenants = () => {
   const [message, setMessage] = useState('');
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState(null);
+
+  // Fetch tenants for a property - wrapped in useCallback
+  const fetchTenants = useCallback(async (propertyId) => {
+    try {
+      setLoading(true);
+      const data = await tenantService.getTenantsForProperty(propertyId);
+      setTenants(data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching tenants:', err);
+      setError('Failed to load tenants. Please try again later.');
+      setLoading(false);
+    }
+  }, []);
 
   // Get current user from local storage
   useEffect(() => {
@@ -34,13 +47,8 @@ const Tenants = () => {
     // Get current property from localStorage or fetch first property
     const fetchProperties = async () => {
       try {
-        const response = await axios.get('http://localhost:5008/api/properties/', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        const fetchedProperties = response.data || [];
+        // Use apiHelpers instead of direct axios call
+        const fetchedProperties = await apiHelpers.get('properties/');
         
         if (fetchedProperties.length > 0) {
           // Get current property from localStorage or use the first one
@@ -62,6 +70,8 @@ const Tenants = () => {
           if (propertyToUse) {
             fetchTenants(propertyToUse.id);
           }
+        } else {
+          setLoading(false);
         }
       } catch (err) {
         console.error('Error fetching properties:', err);
@@ -71,10 +81,10 @@ const Tenants = () => {
     };
     
     fetchProperties();
-  }, [navigate]);
+  }, [navigate, fetchTenants]); // Added fetchTenants to dependency array
 
   // Handle property selection from dropdown
-  const handleSelectProperty = (property) => {
+  const handleSelectProperty = useCallback((property) => {
     setCurrentProperty(property);
     
     // Save to localStorage
@@ -82,21 +92,7 @@ const Tenants = () => {
     
     // Fetch tenants for the selected property
     fetchTenants(property.id);
-  };
-
-  // Fetch tenants for a property
-  const fetchTenants = async (propertyId) => {
-    try {
-      setLoading(true);
-      const data = await tenantService.getTenantsForProperty(propertyId);
-      setTenants(data);
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching tenants:', err);
-      setError('Failed to load tenants. Please try again later.');
-      setLoading(false);
-    }
-  };
+  }, [fetchTenants]);
 
   // Handle viewing tenant details
   const viewTenantDetails = (tenant) => {

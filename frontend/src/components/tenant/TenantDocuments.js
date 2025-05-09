@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-
+import { API_BASE_URL } from '../../services/api';
 import Navigation from '../layout/Navigation';
 import tenantService from '../services/tenantService';
 
@@ -25,6 +25,28 @@ const TenantDocuments = () => {
     file: null
   });
 
+  // Fetch tenant data - wrapped in useCallback
+  const fetchTenantData = useCallback(async () => {
+    try {
+      const tenantData = await tenantService.getTenant(tenantId);
+      setTenant(tenantData);
+    } catch (err) {
+      console.error('Error fetching tenant details:', err);
+      setError('Failed to load tenant information. Please try again later.');
+    }
+  }, [tenantId]);
+
+  // Fetch tenant documents - wrapped in useCallback
+  const fetchTenantDocuments = useCallback(async () => {
+    try {
+      const documentsData = await tenantService.getTenantDocuments(tenantId);
+      setDocuments(documentsData);
+    } catch (err) {
+      console.error('Error fetching tenant documents:', err);
+      setError('Failed to load documents. Please try again later.');
+    }
+  }, [tenantId]);
+
   // Fetch user, tenant and documents
   useEffect(() => {
     const userString = localStorage.getItem('user');
@@ -39,30 +61,47 @@ const TenantDocuments = () => {
     
     const fetchData = async () => {
       try {
-        // Fetch tenant details
-        const tenantData = await tenantService.getTenant(tenantId);
-        setTenant(tenantData);
-        
-        // Fetch tenant documents
-        const documentsData = await tenantService.getTenantDocuments(tenantId);
-        setDocuments(documentsData);
-        
+        setLoading(true);
+        // Fetch tenant details and documents
+        await fetchTenantData();
+        await fetchTenantDocuments();
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching tenant data:', err);
-        setError('Failed to load tenant information. Please try again later.');
+        console.error('Error fetching data:', err);
         setLoading(false);
       }
     };
     
     fetchData();
-  }, [navigate, tenantId]);
+  }, [navigate, fetchTenantData, fetchTenantDocuments]);
 
-  // Handle file input change
+  // Get document URL with proper formatting
+  const getDocumentUrl = (document) => {
+    if (!document || !document.url) return null;
+    
+    // If it's already a full URL, return it as is
+    if (document.url.startsWith('http')) {
+      return document.url;
+    }
+    
+    // Ensure the URL starts with a slash if needed
+    const formattedUrl = document.url.startsWith('/') ? document.url : `/${document.url}`;
+    return `${API_BASE_URL}${formattedUrl}`;
+  };
+
+  // Handle file input change with size validation
   const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    
+    
+    if (file && file.size > 200 * 1024 * 1024) { // 200MB limit
+      setError('File size exceeds the maximum limit of 200MB');
+      return;
+  }
+    
     setUploadData({
       ...uploadData,
-      file: e.target.files[0]
+      file: file
     });
   };
 
@@ -83,6 +122,12 @@ const TenantDocuments = () => {
       setError('Please select a file to upload');
       return;
     }
+    
+    // Validate file size again
+    if (uploadData.file.size > 200 * 1024 * 1024) {
+      setError('File size exceeds the maximum limit of 200MB');
+      return;
+  }
     
     try {
       setLoading(true);
@@ -109,8 +154,7 @@ const TenantDocuments = () => {
       setMessage('Document uploaded successfully!');
       
       // Reload documents
-      const documentsData = await tenantService.getTenantDocuments(tenantId);
-      setDocuments(documentsData);
+      await fetchTenantDocuments();
       
       setLoading(false);
     } catch (err) {
@@ -120,15 +164,26 @@ const TenantDocuments = () => {
     }
   };
 
-  // Handle document download
-  const handleDownload = async (documentId) => {
+  // Handle document download - Updated to use document URL
+  const handleDownload = (document) => {
     try {
-      // For now, we'll just mock the download
-      // In a real implementation, you would use the API to get a download URL
-      console.log(`Downloading document ${documentId}`);
-      
-      // Mock a successful download
-      setMessage('Document downloaded successfully!');
+      if (document.url) {
+        // Get the full URL with base
+        const downloadUrl = getDocumentUrl(document);
+        
+        // Create a temporary link for download
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.setAttribute('download', document.title || 'document');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        setMessage('Document downloaded successfully!');
+      } else {
+        console.log(`Document ${document.id} has no URL - fallback to old download method`);
+        setError('Could not download document. Please try again later.');
+      }
     } catch (err) {
       console.error('Error downloading document:', err);
       setError('Failed to download document. Please try again later.');
@@ -145,8 +200,7 @@ const TenantDocuments = () => {
         setMessage('Document deleted successfully!');
         
         // Reload documents
-        const documentsData = await tenantService.getTenantDocuments(tenantId);
-        setDocuments(documentsData);
+        await fetchTenantDocuments();
         
         setLoading(false);
       } catch (err) {
@@ -159,7 +213,7 @@ const TenantDocuments = () => {
 
   // Format file size
   const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0 || !bytes) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -180,7 +234,11 @@ const TenantDocuments = () => {
 
   // Get file icon based on document type
   const getFileIcon = (fileType) => {
-    if (!fileType) return 'document';
+    if (!fileType) return (
+      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+      </svg>
+    );
     
     if (fileType.includes('pdf')) {
       return (
@@ -200,16 +258,10 @@ const TenantDocuments = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
         </svg>
       );
-    } else if (fileType.includes('word') || fileType.includes('document')) {
+    } else {
       return (
         <svg className="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-        </svg>
-      );
-    } else {
-      return (
-        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
         </svg>
       );
     }
@@ -391,12 +443,26 @@ const TenantDocuments = () => {
                   </div>
                   
                   <div className="flex justify-between mt-4">
-                    <button 
-                      className="text-secondary hover:text-secondary-light text-sm"
-                      onClick={() => handleDownload(doc.id)}
-                    >
-                      Download
-                    </button>
+                    {/* Use URL directly if available */}
+                    {doc.url ? (
+                      <a 
+                        href={getDocumentUrl(doc)}
+                        className="text-secondary hover:text-secondary-light text-sm"
+                        download={doc.title}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Download
+                      </a>
+                    ) : (
+                      <button 
+                        className="text-secondary hover:text-secondary-light text-sm"
+                        onClick={() => handleDownload(doc)}
+                      >
+                        Download
+                      </button>
+                    )}
+                    
                     <button 
                       className="text-red-500 hover:text-red-400 text-sm"
                       onClick={() => handleDelete(doc.id)}
@@ -489,6 +555,7 @@ const TenantDocuments = () => {
                               ref={fileInputRef}
                             />
                           </label>
+                          <p className="text-xs text-gray-500 mt-2">Maximum file size: 200MB</p>
                         </div>
                       )}
                     </div>
