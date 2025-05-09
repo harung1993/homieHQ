@@ -23,13 +23,34 @@ def get_expenses():
     end_date = request.args.get('end_date')
     category = request.args.get('category')
     
-    # Build query
-    query = Expense.query.filter_by(user_id=current_user_id)
-    
-    # Apply filters
+    # If property_id is provided, check access first
     if property_id:
-        query = query.filter_by(property_id=property_id)
+        # Verify user has access to this property
+        property_user = PropertyUser.query.filter_by(
+            property_id=property_id,
+            user_id=current_user_id,
+            status='active'
+        ).first()
+        
+        if not property_user or property_user.role not in ['owner', 'manager']:
+            return jsonify({"error": "Property not found or you don't have permission to view expenses"}), 403
+        
+        # User has appropriate access, get expenses for this property
+        query = Expense.query.filter_by(property_id=property_id)
+    else:
+        # Get all properties the user has owner or manager access to
+        property_users = PropertyUser.query.filter(
+            PropertyUser.user_id == current_user_id,
+            PropertyUser.status == 'active',
+            PropertyUser.role.in_(['owner', 'manager'])
+        ).all()
+        
+        property_ids = [pu.property_id for pu in property_users]
+        
+        # Get expenses for all properties the user has owner/manager access to
+        query = Expense.query.filter(Expense.property_id.in_(property_ids))
     
+    # Apply date filters if provided
     if start_date:
         try:
             start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
@@ -44,14 +65,19 @@ def get_expenses():
         except ValueError:
             return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD"}), 400
     
+    # Apply category filter if provided
     if category:
         query = query.filter_by(category=category)
     
     # Execute query
     expenses = query.order_by(Expense.date.desc()).all()
     
-    # Convert to dictionaries
-    result = [expense.to_dict() for expense in expenses]
+    # Convert to dictionaries and add created_by
+    result = []
+    for expense in expenses:
+        expense_dict = expense.to_dict()
+        expense_dict['created_by'] = expense.user_id  # Add who created the expense
+        result.append(expense_dict)
     
     return jsonify(result)
 
@@ -126,27 +152,24 @@ def get_expense(expense_id):
     """Get a specific expense"""
     current_user_id = int(get_jwt_identity())
     
-    expense = Expense.query.filter_by(id=expense_id).first()
+    expense = Expense.query.get(expense_id)
     if not expense:
         return jsonify({"error": "Expense not found"}), 404
     
-    # Check if user owns the expense or has permission on the property
-    if expense.user_id != current_user_id:
-        # If associated with a property, check property permissions
-        if expense.property_id:
-            property_user = PropertyUser.query.filter_by(
-                property_id=expense.property_id,
-                user_id=current_user_id,
-                status='active'
-            ).first()
-            
-            if not property_user:
-                return jsonify({"error": "You don't have permission to view this expense"}), 403
-        else:
-            # Not user's expense and not associated with a property they have access to
-            return jsonify({"error": "Expense not found or access denied"}), 404
+    # Check if user has permission for the property this expense is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=expense.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
     
-    return jsonify(expense.to_dict())
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to view this expense"}), 403
+    
+    expense_dict = expense.to_dict()
+    expense_dict['created_by'] = expense.user_id  # Add who created the expense
+    
+    return jsonify(expense_dict)
 
 @finances_bp.route('/expenses/<int:expense_id>', methods=['PUT'])
 @jwt_required()
@@ -154,25 +177,19 @@ def update_expense(expense_id):
     """Update an expense"""
     current_user_id = int(get_jwt_identity())
     
-    expense = Expense.query.filter_by(id=expense_id).first()
+    expense = Expense.query.get(expense_id)
     if not expense:
         return jsonify({"error": "Expense not found"}), 404
     
-    # Check if user owns the expense or has permission on the property
-    if expense.user_id != current_user_id:
-        # If associated with a property, check property permissions
-        if expense.property_id:
-            property_user = PropertyUser.query.filter_by(
-                property_id=expense.property_id,
-                user_id=current_user_id,
-                status='active'
-            ).first()
-            
-            if not property_user or property_user.role not in ['owner', 'manager']:
-                return jsonify({"error": "You don't have permission to update this expense"}), 403
-        else:
-            # Not user's expense and not associated with a property they have access to
-            return jsonify({"error": "Expense not found or access denied"}), 404
+    # Check if user has permission for the property this expense is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=expense.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to update this expense"}), 403
     
     data = request.get_json()
     
@@ -241,25 +258,19 @@ def delete_expense(expense_id):
     """Delete an expense"""
     current_user_id = int(get_jwt_identity())
     
-    expense = Expense.query.filter_by(id=expense_id).first()
+    expense = Expense.query.get(expense_id)
     if not expense:
         return jsonify({"error": "Expense not found"}), 404
     
-    # Check if user owns the expense or has permission on the property
-    if expense.user_id != current_user_id:
-        # If associated with a property, check property permissions
-        if expense.property_id:
-            property_user = PropertyUser.query.filter_by(
-                property_id=expense.property_id,
-                user_id=current_user_id,
-                status='active'
-            ).first()
-            
-            if not property_user or property_user.role not in ['owner', 'manager']:
-                return jsonify({"error": "You don't have permission to delete this expense"}), 403
-        else:
-            # Not user's expense and not associated with a property they have access to
-            return jsonify({"error": "Expense not found or access denied"}), 404
+    # Check if user has permission for the property this expense is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=expense.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to delete this expense"}), 403
     
     db.session.delete(expense)
     db.session.commit()
@@ -272,7 +283,7 @@ def delete_expense(expense_id):
 @jwt_required()
 def get_expense_categories():
     """Get expense categories"""
-    current_user_id = int(get_jwt_identity())
+    # No need to check permissions for getting categories
     
     # Predefined categories
     categories = [
@@ -295,13 +306,34 @@ def get_budgets():
     year = request.args.get('year')
     month = request.args.get('month')
     
-    # Build query
-    query = Budget.query.filter_by(user_id=current_user_id)
+    # If property_id is provided, check access first
+    if property_id:
+        # Verify user has access to this property
+        property_user = PropertyUser.query.filter_by(
+            property_id=property_id,
+            user_id=current_user_id,
+            status='active'
+        ).first()
+        
+        if not property_user or property_user.role not in ['owner', 'manager']:
+            return jsonify({"error": "Property not found or you don't have permission to view budgets"}), 403
+        
+        # User has appropriate access, get budgets for this property
+        query = Budget.query.filter_by(property_id=property_id)
+    else:
+        # Get all properties the user has owner or manager access to
+        property_users = PropertyUser.query.filter(
+            PropertyUser.user_id == current_user_id,
+            PropertyUser.status == 'active',
+            PropertyUser.role.in_(['owner', 'manager'])
+        ).all()
+        
+        property_ids = [pu.property_id for pu in property_users]
+        
+        # Get budgets for all properties the user has owner/manager access to
+        query = Budget.query.filter(Budget.property_id.in_(property_ids))
     
     # Apply filters
-    if property_id:
-        query = query.filter_by(property_id=property_id)
-    
     if year:
         try:
             query = query.filter_by(year=int(year))
@@ -320,8 +352,12 @@ def get_budgets():
     # Execute query
     budgets = query.order_by(Budget.year, Budget.month, Budget.category).all()
     
-    # Convert to dictionaries
-    result = [budget.to_dict() for budget in budgets]
+    # Convert to dictionaries and add created_by
+    result = []
+    for budget in budgets:
+        budget_dict = budget.to_dict()
+        budget_dict['created_by'] = budget.user_id  # Add who created the budget
+        result.append(budget_dict)
     
     return jsonify(result)
 
@@ -414,27 +450,24 @@ def get_budget(budget_id):
     """Get a specific budget"""
     current_user_id = int(get_jwt_identity())
     
-    budget = Budget.query.filter_by(id=budget_id).first()
+    budget = Budget.query.get(budget_id)
     if not budget:
         return jsonify({"error": "Budget not found"}), 404
     
-    # Check if user owns the budget or has permission on the property
-    if budget.user_id != current_user_id:
-        # If associated with a property, check property permissions
-        if budget.property_id:
-            property_user = PropertyUser.query.filter_by(
-                property_id=budget.property_id,
-                user_id=current_user_id,
-                status='active'
-            ).first()
-            
-            if not property_user:
-                return jsonify({"error": "You don't have permission to view this budget"}), 403
-        else:
-            # Not user's budget and not associated with a property they have access to
-            return jsonify({"error": "Budget not found or access denied"}), 404
+    # Check if user has permission for the property this budget is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=budget.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
     
-    return jsonify(budget.to_dict())
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to view this budget"}), 403
+    
+    budget_dict = budget.to_dict()
+    budget_dict['created_by'] = budget.user_id  # Add who created the budget
+    
+    return jsonify(budget_dict)
 
 @finances_bp.route('/budgets/<int:budget_id>', methods=['PUT'])
 @jwt_required()
@@ -442,25 +475,19 @@ def update_budget(budget_id):
     """Update a budget"""
     current_user_id = int(get_jwt_identity())
     
-    budget = Budget.query.filter_by(id=budget_id).first()
+    budget = Budget.query.get(budget_id)
     if not budget:
         return jsonify({"error": "Budget not found"}), 404
     
-    # Check if user owns the budget or has permission on the property
-    if budget.user_id != current_user_id:
-        # If associated with a property, check property permissions
-        if budget.property_id:
-            property_user = PropertyUser.query.filter_by(
-                property_id=budget.property_id,
-                user_id=current_user_id,
-                status='active'
-            ).first()
-            
-            if not property_user or property_user.role not in ['owner', 'manager']:
-                return jsonify({"error": "You don't have permission to update this budget"}), 403
-        else:
-            # Not user's budget and not associated with a property they have access to
-            return jsonify({"error": "Budget not found or access denied"}), 404
+    # Check if user has permission for the property this budget is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=budget.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to update this budget"}), 403
     
     data = request.get_json()
     
@@ -551,25 +578,19 @@ def delete_budget(budget_id):
     """Delete a budget"""
     current_user_id = int(get_jwt_identity())
     
-    budget = Budget.query.filter_by(id=budget_id).first()
+    budget = Budget.query.get(budget_id)
     if not budget:
         return jsonify({"error": "Budget not found"}), 404
     
-    # Check if user owns the budget or has permission on the property
-    if budget.user_id != current_user_id:
-        # If associated with a property, check property permissions
-        if budget.property_id:
-            property_user = PropertyUser.query.filter_by(
-                property_id=budget.property_id,
-                user_id=current_user_id,
-                status='active'
-            ).first()
-            
-            if not property_user or property_user.role not in ['owner', 'manager']:
-                return jsonify({"error": "You don't have permission to delete this budget"}), 403
-        else:
-            # Not user's budget and not associated with a property they have access to
-            return jsonify({"error": "Budget not found or access denied"}), 404
+    # Check if user has permission for the property this budget is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=budget.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to delete this budget"}), 403
     
     db.session.delete(budget)
     db.session.commit()
@@ -612,7 +633,7 @@ def monthly_summary_report():
         status='active'
     ).first()
     
-    if not property_user:
+    if not property_user or property_user.role not in ['owner', 'manager']:
         return jsonify({"error": "Property not found or you don't have permission to view reports"}), 403
     
     # Get the property
@@ -627,16 +648,15 @@ def monthly_summary_report():
     else:
         end_date = datetime(year_int, month_int + 1, 1).date()
     
+    # Get all expenses for this property for the specified month (not filtered by user_id)
     expenses = Expense.query.filter(
-        Expense.user_id == current_user_id,
         Expense.property_id == property_id,
         Expense.date >= start_date,
         Expense.date < end_date
     ).all()
     
-    # Get budgets for the specified month
+    # Get budgets for the specified month (not filtered by user_id)
     budgets = Budget.query.filter_by(
-        user_id=current_user_id,
         property_id=property_id,
         year=year_int,
         month=month_int
@@ -738,7 +758,7 @@ def yearly_summary_report():
         status='active'
     ).first()
     
-    if not property_user:
+    if not property_user or property_user.role not in ['owner', 'manager']:
         return jsonify({"error": "Property not found or you don't have permission to view reports"}), 403
     
     # Get the property
@@ -746,20 +766,18 @@ def yearly_summary_report():
     if not property:
         return jsonify({"error": "Property not found"}), 404
     
-    # Get all expenses for the year
+    # Get all expenses for the year for this property (not filtered by user_id)
     start_date = datetime(year_int, 1, 1).date()
     end_date = datetime(year_int + 1, 1, 1).date()
     
     expenses = Expense.query.filter(
-        Expense.user_id == current_user_id,
         Expense.property_id == property_id,
         Expense.date >= start_date,
         Expense.date < end_date
     ).all()
     
-    # Get all budgets for the year
+    # Get all budgets for the year for this property (not filtered by user_id)
     budgets = Budget.query.filter_by(
-        user_id=current_user_id,
         property_id=property_id,
         year=year_int
     ).all()
@@ -866,7 +884,7 @@ def property_comparison_report():
     if not property_users:
         return jsonify({"error": "No properties found"}), 404
     
-    property_ids = [pu.property_id for pu in property_users]
+    property_ids = [pu.property_id for pu in property_users if pu.role in ['owner', 'manager']]
     properties = Property.query.filter(Property.id.in_(property_ids)).all()
     
     if not properties:

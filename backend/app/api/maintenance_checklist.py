@@ -6,6 +6,7 @@ from app.models.maintenance_checklist import MaintenanceChecklistItem
 from app.models.user import User
 from app.models.property import Property
 from datetime import datetime
+from app.models.Property_user import PropertyUser
 
 # Create blueprint for checklist routes
 checklist_bp = Blueprint('maintenance_checklist', __name__, url_prefix='/api/maintenance/checklist')
@@ -22,21 +23,46 @@ def get_seasonal_checklist(season):
     if season not in valid_seasons:
         return jsonify({"error": "Invalid season. Must be one of: Spring, Summer, Fall, Winter"}), 400
     
-    # Build the query
-    query = MaintenanceChecklistItem.query.filter_by(
-        user_id=current_user_id,
-        season=season
-    )
-    
+    # If property_id is provided, check access first
     if property_id:
-        query = query.filter_by(property_id=property_id)
+        # Verify user has owner or manager access to this property
+        property_user = PropertyUser.query.filter_by(
+            property_id=property_id,
+            user_id=current_user_id,
+            status='active'
+        ).first()
+        
+        if not property_user or property_user.role not in ['owner', 'manager']:
+            return jsonify({"error": "Property not found or you don't have permission to view checklists"}), 403
+        
+        # Build the query for this property
+        query = MaintenanceChecklistItem.query.filter_by(
+            property_id=property_id,
+            season=season
+        )
+    else:
+        # Get all properties the user has owner or manager access to
+        property_users = PropertyUser.query.filter(
+            PropertyUser.user_id == current_user_id,
+            PropertyUser.status == 'active',
+            PropertyUser.role.in_(['owner', 'manager'])
+        ).all()
+        
+        property_ids = [pu.property_id for pu in property_users]
+        
+        # Get checklist items created by the user OR for properties they have owner/manager access to
+        query = MaintenanceChecklistItem.query.filter(
+            (MaintenanceChecklistItem.user_id == current_user_id) | 
+            (MaintenanceChecklistItem.property_id.in_(property_ids)),
+            MaintenanceChecklistItem.season == season
+        )
     
     # Execute the query
     checklist_items = query.order_by(MaintenanceChecklistItem.is_completed, 
                                     MaintenanceChecklistItem.task).all()
     
-    # If no items exist for this user, create default items
-    if not checklist_items:
+    # If no items exist for this property, create default items
+    if not checklist_items and property_id:
         checklist_items = create_default_checklist_items(current_user_id, property_id, season)
     
     result = []
@@ -51,7 +77,8 @@ def get_seasonal_checklist(season):
             'is_default': item.is_default,
             'property_id': item.property_id,
             'created_at': item.created_at.isoformat(),
-            'updated_at': item.updated_at.isoformat()
+            'updated_at': item.updated_at.isoformat(),
+            'created_by': item.user_id  # Include who created the item
         })
     
     return jsonify(result)
@@ -63,11 +90,37 @@ def get_all_checklists():
     current_user_id = int(get_jwt_identity())
     property_id = request.args.get('property_id')
     
-    query = MaintenanceChecklistItem.query.filter_by(user_id=current_user_id)
-    
+    # If property_id is provided, check access first
     if property_id:
-        query = query.filter_by(property_id=property_id)
+        # Verify user has owner or manager access to this property
+        property_user = PropertyUser.query.filter_by(
+            property_id=property_id,
+            user_id=current_user_id,
+            status='active'
+        ).first()
+        
+        if not property_user or property_user.role not in ['owner', 'manager']:
+            return jsonify({"error": "Property not found or you don't have permission to view checklists"}), 403
+        
+        # Build the query for this property
+        query = MaintenanceChecklistItem.query.filter_by(property_id=property_id)
+    else:
+        # Get all properties the user has owner or manager access to
+        property_users = PropertyUser.query.filter(
+            PropertyUser.user_id == current_user_id,
+            PropertyUser.status == 'active',
+            PropertyUser.role.in_(['owner', 'manager'])
+        ).all()
+        
+        property_ids = [pu.property_id for pu in property_users]
+        
+        # Get checklist items created by the user OR for properties they have owner/manager access to
+        query = MaintenanceChecklistItem.query.filter(
+            (MaintenanceChecklistItem.user_id == current_user_id) | 
+            (MaintenanceChecklistItem.property_id.in_(property_ids))
+        )
     
+    # Execute the query
     items = query.order_by(MaintenanceChecklistItem.season, 
                           MaintenanceChecklistItem.is_completed, 
                           MaintenanceChecklistItem.task).all()
@@ -88,27 +141,30 @@ def get_all_checklists():
             'is_default': item.is_default,
             'property_id': item.property_id,
             'created_at': item.created_at.isoformat(),
-            'updated_at': item.updated_at.isoformat()
+            'updated_at': item.updated_at.isoformat(),
+            'created_by': item.user_id  # Include who created the item
         })
     
-    # Check if any seasons have no items, create defaults for them
-    property_id_int = int(property_id) if property_id else None
-    for season in ['Spring', 'Summer', 'Fall', 'Winter']:
-        if not result[season]:
-            new_items = create_default_checklist_items(current_user_id, property_id_int, season)
-            for item in new_items:
-                result[season].append({
-                    'id': item.id,
-                    'task': item.task,
-                    'description': item.description,
-                    'season': item.season,
-                    'is_completed': item.is_completed,
-                    'completed_at': item.completed_at.isoformat() if item.completed_at else None,
-                    'is_default': item.is_default,
-                    'property_id': item.property_id,
-                    'created_at': item.created_at.isoformat(),
-                    'updated_at': item.updated_at.isoformat()
-                })
+    # Check if any seasons have no items for a specific property, create defaults for them
+    if property_id:
+        property_id_int = int(property_id)
+        for season in ['Spring', 'Summer', 'Fall', 'Winter']:
+            if not result[season]:
+                new_items = create_default_checklist_items(current_user_id, property_id_int, season)
+                for item in new_items:
+                    result[season].append({
+                        'id': item.id,
+                        'task': item.task,
+                        'description': item.description,
+                        'season': item.season,
+                        'is_completed': item.is_completed,
+                        'completed_at': item.completed_at.isoformat() if item.completed_at else None,
+                        'is_default': item.is_default,
+                        'property_id': item.property_id,
+                        'created_at': item.created_at.isoformat(),
+                        'updated_at': item.updated_at.isoformat(),
+                        'created_by': item.user_id  # Include who created the item
+                    })
     
     return jsonify(result)
 

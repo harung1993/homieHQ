@@ -120,8 +120,8 @@ def get_property_photos(property_id):
         status='active'
     ).first()
     
-    if not property_user:
-        return jsonify({"error": "Property not found or access denied"}), 404
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "Property not found or you don't have permission to view photos"}), 403
     
     # Get the property
     property = Property.query.get(property_id)
@@ -129,6 +129,7 @@ def get_property_photos(property_id):
         return jsonify({"error": "Property not found"}), 404
     
     # Query documents that are photos for this property
+    # We don't need to filter by user_id anymore, as we've already verified access
     photos = Document.query.filter_by(
         property_id=property_id,
         category='property_photo'
@@ -145,7 +146,8 @@ def get_property_photos(property_id):
             'description': photo.description,
             'url': f"/uploads/documents/photos/property_{property_id}/{filename}",
             'is_primary': property.image_url == f"/uploads/documents/photos/property_{property_id}/{filename}",
-            'created_at': photo.created_at.isoformat()
+            'created_at': photo.created_at.isoformat(),
+            'created_by': photo.user_id  # Include who uploaded the photo
         })
     
     return jsonify(result)

@@ -7,6 +7,7 @@ from app.models.user import User
 from datetime import datetime
 from app.models.Property_user import PropertyUser
 
+
 appliances_bp = Blueprint('appliances', __name__)
 
 @appliances_bp.route('/', methods=['GET'])
@@ -17,15 +18,42 @@ def get_appliances():
 
     property_id = request.args.get('property_id')
     
-    query = Appliance.query.filter_by(user_id=current_user_id)
-    
+    # If property_id is provided, check access first
     if property_id:
-        query = query.filter_by(property_id=property_id)
+        # Verify user has access to this property
+        property_user = PropertyUser.query.filter_by(
+            property_id=property_id,
+            user_id=current_user_id,
+            status='active'
+        ).first()
+        
+        if not property_user or property_user.role not in ['owner', 'manager']:
+            return jsonify({"error": "Property not found or you don't have permission to view appliances"}), 403
+        
+        # User has appropriate access, get appliances for this property
+        query = Appliance.query.filter_by(property_id=property_id)
+    else:
+        # Get all properties the user has owner or manager access to
+        property_users = PropertyUser.query.filter(
+            PropertyUser.user_id == current_user_id,
+            PropertyUser.status == 'active',
+            PropertyUser.role.in_(['owner', 'manager'])
+        ).all()
+        
+        property_ids = [pu.property_id for pu in property_users]
+        
+        # Get appliances created by the user OR for properties they have owner/manager access to
+        query = Appliance.query.filter(
+            (Appliance.user_id == current_user_id) | 
+            (Appliance.property_id.in_(property_ids))
+        )
     
+    # Apply category filter if provided
     category = request.args.get('category')
     if category:
         query = query.filter_by(category=category)
     
+    # Execute query
     appliances = query.order_by(Appliance.created_at.desc()).all()
     
     result = []
@@ -42,7 +70,8 @@ def get_appliances():
             'category': appliance.category,
             'created_at': appliance.created_at.isoformat(),
             'updated_at': appliance.updated_at.isoformat(),
-            'property_id': appliance.property_id
+            'property_id': appliance.property_id,
+            'created_by': appliance.user_id  # Include who created the appliance
         })
     
     return jsonify(result)

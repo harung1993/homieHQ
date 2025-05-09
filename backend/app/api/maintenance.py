@@ -17,11 +17,37 @@ def get_maintenance_requests():
 
     property_id = request.args.get('property_id')
     
-    query = Maintenance.query.filter_by(user_id=current_user_id)
-    
+    # If property_id is provided, get requests for that property if user has access
     if property_id:
-        query = query.filter_by(property_id=property_id)
+        # Check if user has owner or manager access to this property
+        property_user = PropertyUser.query.filter_by(
+            property_id=property_id,
+            user_id=current_user_id,
+            status='active'
+        ).first()
+        
+        if not property_user or property_user.role not in ['owner', 'manager']:
+            return jsonify({"error": "Property not found or you don't have permission to view maintenance requests"}), 403
+        
+        # User has appropriate access, get maintenance requests for this property
+        query = Maintenance.query.filter_by(property_id=property_id)
+    else:
+        # Get all properties the user has owner or manager access to
+        property_users = PropertyUser.query.filter(
+            PropertyUser.user_id == current_user_id,
+            PropertyUser.status == 'active',
+            PropertyUser.role.in_(['owner', 'manager'])
+        ).all()
+        
+        property_ids = [pu.property_id for pu in property_users]
+        
+        # Get requests created by the user OR for properties they have owner/manager access to
+        query = Maintenance.query.filter(
+            (Maintenance.user_id == current_user_id) | 
+            (Maintenance.property_id.in_(property_ids))
+        )
     
+    # Apply additional filters
     status = request.args.get('status')
     if status:
         query = query.filter_by(status=status)
@@ -40,7 +66,8 @@ def get_maintenance_requests():
             'created_at': req.created_at.isoformat(),
             'updated_at': req.updated_at.isoformat(),
             'completed_at': req.completed_at.isoformat() if req.completed_at else None,
-            'property_id': req.property_id
+            'property_id': req.property_id,
+            'created_by': req.user_id  # Include who created the request
         })
     
     return jsonify(result)

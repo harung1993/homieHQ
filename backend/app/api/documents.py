@@ -31,17 +31,65 @@ def get_documents():
     tenant_id = request.args.get('tenant_id')
     category = request.args.get('category')
     
-    query = Document.query.filter_by(user_id=current_user_id)
-    
+    # If property_id is provided, check access first
     if property_id:
-        query = query.filter_by(property_id=property_id)
+        # Verify user has access to this property
+        property_user = PropertyUser.query.filter_by(
+            property_id=property_id,
+            user_id=current_user_id,
+            status='active'
+        ).first()
+        
+        if not property_user or property_user.role not in ['owner', 'manager']:
+            return jsonify({"error": "Property not found or you don't have permission to view documents"}), 403
+        
+        # User has appropriate access, get documents for this property
+        query = Document.query.filter_by(property_id=property_id)
+        
+        # If tenant_id is also provided, filter by tenant
+        if tenant_id:
+            query = query.filter_by(tenant_id=tenant_id)
+    else:
+        # If only tenant_id is provided without property_id
+        if tenant_id:
+            # Verify tenant exists and user has access
+            tenant = Tenant.query.get(tenant_id)
+            if not tenant:
+                return jsonify({"error": "Tenant not found"}), 404
+                
+            # Check if user has access to the property this tenant is associated with
+            property_user = PropertyUser.query.filter_by(
+                property_id=tenant.property_id,
+                user_id=current_user_id,
+                status='active'
+            ).first()
+            
+            if not property_user or property_user.role not in ['owner', 'manager']:
+                return jsonify({"error": "You don't have permission to view this tenant's documents"}), 403
+                
+            # User has access, get documents for this tenant
+            query = Document.query.filter_by(tenant_id=tenant_id)
+        else:
+            # No property_id or tenant_id - get all properties the user has owner or manager access to
+            property_users = PropertyUser.query.filter(
+                PropertyUser.user_id == current_user_id,
+                PropertyUser.status == 'active',
+                PropertyUser.role.in_(['owner', 'manager'])
+            ).all()
+            
+            property_ids = [pu.property_id for pu in property_users]
+            
+            # Get documents created by the user OR for properties they have owner/manager access to
+            query = Document.query.filter(
+                (Document.user_id == current_user_id) | 
+                (Document.property_id.in_(property_ids))
+            )
     
-    if tenant_id:
-        query = query.filter_by(tenant_id=tenant_id)
-    
+    # Apply category filter if provided
     if category:
         query = query.filter_by(category=category)
     
+    # Execute query
     documents = query.order_by(Document.created_at.desc()).all()
     
     result = []
@@ -67,7 +115,8 @@ def get_documents():
             'property_id': doc.property_id,
             'tenant_id': doc.tenant_id,
             'expiration_date': doc.expiration_date.isoformat() if doc.expiration_date else None,
-            'url': url  # Add URL to the response
+            'url': url,  # Add URL to the response
+            'created_by': doc.user_id  # Include who uploaded the document
         })
     
     return jsonify(result)

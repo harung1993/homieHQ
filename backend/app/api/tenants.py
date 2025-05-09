@@ -31,15 +31,39 @@ def get_tenants():
     current_user_id = int(get_jwt_identity())
     property_id = request.args.get('property_id')
     
-    query = Tenant.query.filter_by(user_id=current_user_id)
-    
+    # If property_id is provided, check access first
     if property_id:
-        query = query.filter_by(property_id=property_id)
+        # Verify user has access to this property
+        property_user = PropertyUser.query.filter_by(
+            property_id=property_id,
+            user_id=current_user_id,
+            status='active'
+        ).first()
+        
+        if not property_user or property_user.role not in ['owner', 'manager']:
+            return jsonify({"error": "Property not found or you don't have permission to view tenants"}), 403
+        
+        # User has appropriate access, get tenants for this property
+        query = Tenant.query.filter_by(property_id=property_id)
+    else:
+        # Get all properties the user has owner or manager access to
+        property_users = PropertyUser.query.filter(
+            PropertyUser.user_id == current_user_id,
+            PropertyUser.status == 'active',
+            PropertyUser.role.in_(['owner', 'manager'])
+        ).all()
+        
+        property_ids = [pu.property_id for pu in property_users]
+        
+        # Get tenants for all properties the user has owner/manager access to
+        query = Tenant.query.filter(Tenant.property_id.in_(property_ids))
     
+    # Apply status filter if provided
     status = request.args.get('status')
     if status:
         query = query.filter_by(status=status)
     
+    # Execute query
     tenants = query.order_by(Tenant.created_at.desc()).all()
     
     result = []
@@ -61,7 +85,8 @@ def get_tenants():
             'notes': tenant.notes,
             'status': tenant.status,
             'created_at': tenant.created_at.isoformat(),
-            'updated_at': tenant.updated_at.isoformat()
+            'updated_at': tenant.updated_at.isoformat(),
+            'created_by': tenant.user_id  # Include who added the tenant
         })
     
     return jsonify(result)
@@ -131,9 +156,20 @@ def get_tenant(tenant_id):
     """Get a specific tenant"""
     current_user_id = int(get_jwt_identity())
     
-    tenant = Tenant.query.filter_by(id=tenant_id, user_id=current_user_id).first()
+    # Get the tenant first
+    tenant = Tenant.query.get(tenant_id)
     if not tenant:
-        return jsonify({"error": "Tenant not found or access denied"}), 404
+        return jsonify({"error": "Tenant not found"}), 404
+    
+    # Check if user has permission for the property this tenant is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=tenant.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to view this tenant"}), 403
     
     result = {
         'id': tenant.id,
@@ -152,7 +188,8 @@ def get_tenant(tenant_id):
         'notes': tenant.notes,
         'status': tenant.status,
         'created_at': tenant.created_at.isoformat(),
-        'updated_at': tenant.updated_at.isoformat()
+        'updated_at': tenant.updated_at.isoformat(),
+        'created_by': tenant.user_id  # Include who added the tenant
     }
     
     return jsonify(result)
@@ -281,15 +318,19 @@ def get_tenants_by_property(property_id):
     """Get all tenants for a specific property"""
     current_user_id = int(get_jwt_identity())
     
-    # Verify property exists and belongs to the user
-    property = Property.query.filter_by(id=property_id, user_id=current_user_id).first()
-    if not property:
-        return jsonify({"error": "Property not found or access denied"}), 404
+    # Verify user has access to this property
+    property_user = PropertyUser.query.filter_by(
+        property_id=property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
     
-    # Get tenants
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "Property not found or you don't have permission to view tenants"}), 403
+    
+    # Get all tenants for this property (not filtered by user_id)
     tenants = Tenant.query.filter_by(
-        property_id=property_id, 
-        user_id=current_user_id
+        property_id=property_id
     ).order_by(Tenant.created_at.desc()).all()
     
     result = []
@@ -306,7 +347,8 @@ def get_tenants_by_property(property_id):
             'monthly_rent': tenant.monthly_rent,
             'security_deposit': tenant.security_deposit,
             'status': tenant.status,
-            'created_at': tenant.created_at.isoformat()
+            'created_at': tenant.created_at.isoformat(),
+            'created_by': tenant.user_id  # Include who added the tenant
         })
     
     return jsonify(result)
@@ -317,9 +359,19 @@ def get_active_tenants():
     """Get all active tenants"""
     current_user_id = int(get_jwt_identity())
     
-    tenants = Tenant.query.filter_by(
-        user_id=current_user_id,
-        status='active'
+    # Get all properties the user has owner or manager access to
+    property_users = PropertyUser.query.filter(
+        PropertyUser.user_id == current_user_id,
+        PropertyUser.status == 'active',
+        PropertyUser.role.in_(['owner', 'manager'])
+    ).all()
+    
+    property_ids = [pu.property_id for pu in property_users]
+    
+    # Get active tenants for all properties the user has owner/manager access to
+    tenants = Tenant.query.filter(
+        Tenant.property_id.in_(property_ids),
+        Tenant.status == 'active'
     ).order_by(Tenant.created_at.desc()).all()
     
     result = []
@@ -331,7 +383,8 @@ def get_active_tenants():
             'last_name': tenant.last_name,
             'email': tenant.email,
             'lease_end': tenant.lease_end.isoformat() if tenant.lease_end else None,
-            'monthly_rent': tenant.monthly_rent
+            'monthly_rent': tenant.monthly_rent,
+            'created_by': tenant.user_id  # Include who added the tenant
         })
     
     return jsonify(result)
@@ -343,8 +396,18 @@ def search_tenants():
     current_user_id = int(get_jwt_identity())
     query = request.args.get('q', '')
     
+    # Get all properties the user has owner or manager access to
+    property_users = PropertyUser.query.filter(
+        PropertyUser.user_id == current_user_id,
+        PropertyUser.status == 'active',
+        PropertyUser.role.in_(['owner', 'manager'])
+    ).all()
+    
+    property_ids = [pu.property_id for pu in property_users]
+    
+    # Search tenants for all properties the user has owner/manager access to
     tenants = Tenant.query.filter(
-        Tenant.user_id == current_user_id,
+        Tenant.property_id.in_(property_ids),
         (Tenant.first_name.ilike(f'%{query}%') | 
          Tenant.last_name.ilike(f'%{query}%') | 
          Tenant.email.ilike(f'%{query}%'))
@@ -359,7 +422,8 @@ def search_tenants():
             'last_name': tenant.last_name,
             'email': tenant.email,
             'phone': tenant.phone,
-            'status': tenant.status
+            'status': tenant.status,
+            'created_by': tenant.user_id  # Include who added the tenant
         })
     
     return jsonify(result)
@@ -370,15 +434,24 @@ def get_tenant_documents(tenant_id):
     """Get all documents for a specific tenant"""
     current_user_id = int(get_jwt_identity())
     
-    # Verify tenant exists and belongs to the user
-    tenant = Tenant.query.filter_by(id=tenant_id, user_id=current_user_id).first()
+    # Get the tenant first
+    tenant = Tenant.query.get(tenant_id)
     if not tenant:
-        return jsonify({"error": "Tenant not found or access denied"}), 404
+        return jsonify({"error": "Tenant not found"}), 404
     
-    # Get documents
+    # Check if user has permission for the property this tenant is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=tenant.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to view this tenant's documents"}), 403
+    
+    # Get all documents for this tenant (not filtered by user_id)
     documents = Document.query.filter_by(
-        tenant_id=tenant_id, 
-        user_id=current_user_id
+        tenant_id=tenant_id
     ).order_by(Document.created_at.desc()).all()
     
     result = []
@@ -398,7 +471,8 @@ def get_tenant_documents(tenant_id):
             'updated_at': doc.updated_at.isoformat(),
             'property_id': doc.property_id,
             'expiration_date': doc.expiration_date.isoformat() if doc.expiration_date else None,
-            'url': url  # Add URL to the response
+            'url': url,  # Add URL to the response
+            'created_by': doc.user_id  # Include who uploaded the document
         })
     
     return jsonify(result)
@@ -409,10 +483,20 @@ def upload_tenant_document(tenant_id):
     """Upload a document for a specific tenant"""
     current_user_id = int(get_jwt_identity())
     
-    # Verify tenant exists and belongs to the user
-    tenant = Tenant.query.filter_by(id=tenant_id, user_id=current_user_id).first()
+    # Get the tenant first
+    tenant = Tenant.query.get(tenant_id)
     if not tenant:
-        return jsonify({"error": "Tenant not found or access denied"}), 404
+        return jsonify({"error": "Tenant not found"}), 404
+    
+    # Check if user has permission for the property this tenant is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=tenant.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to upload documents for this tenant"}), 403
     
     # Check if request has the file
     if 'file' not in request.files:
@@ -491,20 +575,24 @@ def delete_tenant_document(tenant_id, document_id):
     """Delete a tenant's document"""
     current_user_id = int(get_jwt_identity())
     
-    # Verify tenant exists and belongs to the user
-    tenant = Tenant.query.filter_by(id=tenant_id, user_id=current_user_id).first()
+    # Get the tenant and document
+    tenant = Tenant.query.get(tenant_id)
     if not tenant:
-        return jsonify({"error": "Tenant not found or access denied"}), 404
+        return jsonify({"error": "Tenant not found"}), 404
     
-    # Verify document exists, belongs to the user, and is associated with the tenant
-    document = Document.query.filter_by(
-        id=document_id, 
+    document = Document.query.get(document_id)
+    if not document or document.tenant_id != tenant_id:
+        return jsonify({"error": "Document not found or not associated with this tenant"}), 404
+    
+    # Check if user has permission for the property this tenant is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=tenant.property_id,
         user_id=current_user_id,
-        tenant_id=tenant_id
+        status='active'
     ).first()
     
-    if not document:
-        return jsonify({"error": "Document not found or access denied"}), 404
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to delete documents for this tenant"}), 403
     
     # Delete the file from storage
     if os.path.exists(document.file_path):
@@ -524,15 +612,24 @@ def get_tenant_document_categories(tenant_id):
     """Get document categories used for a specific tenant"""
     current_user_id = int(get_jwt_identity())
     
-    # Verify tenant exists and belongs to the user
-    tenant = Tenant.query.filter_by(id=tenant_id, user_id=current_user_id).first()
+    # Get the tenant first
+    tenant = Tenant.query.get(tenant_id)
     if not tenant:
-        return jsonify({"error": "Tenant not found or access denied"}), 404
+        return jsonify({"error": "Tenant not found"}), 404
     
-    # Get distinct categories
+    # Check if user has permission for the property this tenant is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=tenant.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to view this tenant's document categories"}), 403
+    
+    # Get distinct categories for all documents for this tenant
     categories = db.session.query(Document.category).filter_by(
-        tenant_id=tenant_id,
-        user_id=current_user_id
+        tenant_id=tenant_id
     ).distinct().all()
     
     # Extract category names from result tuples
@@ -547,18 +644,28 @@ def get_tenant_expiring_documents(tenant_id):
     current_user_id = int(get_jwt_identity())
     days = int(request.args.get('days', 30))
     
-    # Verify tenant exists and belongs to the user
-    tenant = Tenant.query.filter_by(id=tenant_id, user_id=current_user_id).first()
+    # Get the tenant first
+    tenant = Tenant.query.get(tenant_id)
     if not tenant:
-        return jsonify({"error": "Tenant not found or access denied"}), 404
+        return jsonify({"error": "Tenant not found"}), 404
+    
+    # Check if user has permission for the property this tenant is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=tenant.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to view this tenant's documents"}), 403
     
     # Calculate the date threshold
     today = datetime.now().date()
     expiration_threshold = today + timedelta(days=days)
     
     # Get documents that have an expiration date and are expiring within the threshold
+    # Not filtered by user_id anymore
     documents = Document.query.filter(
-        Document.user_id == current_user_id,
         Document.tenant_id == tenant_id,
         Document.expiration_date.isnot(None),
         Document.expiration_date <= expiration_threshold,
@@ -578,7 +685,8 @@ def get_tenant_expiring_documents(tenant_id):
             'category': doc.category,
             'expiration_date': doc.expiration_date.isoformat(),
             'days_until_expiration': (doc.expiration_date - today).days,
-            'url': url  # Add URL to the response
+            'url': url,  # Add URL to the response
+            'created_by': doc.user_id  # Include who uploaded the document
         })
     
     return jsonify(result)
