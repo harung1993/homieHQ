@@ -5,6 +5,7 @@ from app import db
 from app.models.appliance import Appliance
 from app.models.user import User
 from datetime import datetime
+from app.models.Property_user import PropertyUser
 
 appliances_bp = Blueprint('appliances', __name__)
 
@@ -58,10 +59,22 @@ def create_appliance():
     if not data or not data.get('name') or not data.get('category'):
         return jsonify({"error": "Name and category are required"}), 400
     
+    # If a property_id is provided, check permissions
+    property_id = data.get('property_id')
+    if property_id:
+        property_user = PropertyUser.query.filter_by(
+            property_id=property_id,
+            user_id=current_user_id,
+            status='active'
+        ).first()
+        
+        if not property_user or property_user.role not in ['owner', 'manager']:
+            return jsonify({"error": "Property not found or you don't have permission to add appliances"}), 403
+    
     # Create new appliance
     new_appliance = Appliance(
         user_id=current_user_id,
-        property_id=data.get('property_id'),
+        property_id=property_id,
         name=data.get('name'),
         brand=data.get('brand', ''),
         model=data.get('model', ''),
@@ -86,11 +99,26 @@ def create_appliance():
 def get_appliance(appliance_id):
     """Get a specific appliance"""
     current_user_id = int(get_jwt_identity())
-
     
-    appliance = Appliance.query.filter_by(id=appliance_id, user_id=current_user_id).first()
+    appliance = Appliance.query.filter_by(id=appliance_id).first()
     if not appliance:
-        return jsonify({"error": "Appliance not found or access denied"}), 404
+        return jsonify({"error": "Appliance not found"}), 404
+    
+    # Check if user owns the appliance or has permission on the property
+    if appliance.user_id != current_user_id:
+        # If associated with a property, check property permissions
+        if appliance.property_id:
+            property_user = PropertyUser.query.filter_by(
+                property_id=appliance.property_id,
+                user_id=current_user_id,
+                status='active'
+            ).first()
+            
+            if not property_user:
+                return jsonify({"error": "You don't have permission to view this appliance"}), 403
+        else:
+            # Not user's appliance and not associated with a property they have access to
+            return jsonify({"error": "Appliance not found or access denied"}), 404
     
     result = {
         'id': appliance.id,
@@ -114,11 +142,26 @@ def get_appliance(appliance_id):
 def update_appliance(appliance_id):
     """Update an appliance"""
     current_user_id = int(get_jwt_identity())
-
     
-    appliance = Appliance.query.filter_by(id=appliance_id, user_id=current_user_id).first()
+    appliance = Appliance.query.filter_by(id=appliance_id).first()
     if not appliance:
-        return jsonify({"error": "Appliance not found or access denied"}), 404
+        return jsonify({"error": "Appliance not found"}), 404
+    
+    # Check if user owns the appliance or has permission on the property
+    if appliance.user_id != current_user_id:
+        # If associated with a property, check property permissions
+        if appliance.property_id:
+            property_user = PropertyUser.query.filter_by(
+                property_id=appliance.property_id,
+                user_id=current_user_id,
+                status='active'
+            ).first()
+            
+            if not property_user or property_user.role not in ['owner', 'manager']:
+                return jsonify({"error": "You don't have permission to update this appliance"}), 403
+        else:
+            # Not user's appliance and not associated with a property they have access to
+            return jsonify({"error": "Appliance not found or access denied"}), 404
     
     data = request.get_json()
     
@@ -147,8 +190,20 @@ def update_appliance(appliance_id):
     if 'category' in data:
         appliance.category = data['category']
     
-    if 'property_id' in data:
-        appliance.property_id = data['property_id']
+    # If property_id is being updated, check permissions for new property
+    if 'property_id' in data and data['property_id'] != appliance.property_id:
+        new_property_id = data['property_id']
+        if new_property_id:
+            property_user = PropertyUser.query.filter_by(
+                property_id=new_property_id,
+                user_id=current_user_id,
+                status='active'
+            ).first()
+            
+            if not property_user or property_user.role not in ['owner', 'manager']:
+                return jsonify({"error": "You don't have permission to move this appliance to the specified property"}), 403
+        
+        appliance.property_id = new_property_id
     
     db.session.commit()
     
@@ -163,11 +218,26 @@ def update_appliance(appliance_id):
 def delete_appliance(appliance_id):
     """Delete an appliance"""
     current_user_id = int(get_jwt_identity())
-
     
-    appliance = Appliance.query.filter_by(id=appliance_id, user_id=current_user_id).first()
+    appliance = Appliance.query.filter_by(id=appliance_id).first()
     if not appliance:
-        return jsonify({"error": "Appliance not found or access denied"}), 404
+        return jsonify({"error": "Appliance not found"}), 404
+    
+    # Check if user owns the appliance or has permission on the property
+    if appliance.user_id != current_user_id:
+        # If associated with a property, check property permissions
+        if appliance.property_id:
+            property_user = PropertyUser.query.filter_by(
+                property_id=appliance.property_id,
+                user_id=current_user_id,
+                status='active'
+            ).first()
+            
+            if not property_user or property_user.role not in ['owner', 'manager']:
+                return jsonify({"error": "You don't have permission to delete this appliance"}), 403
+        else:
+            # Not user's appliance and not associated with a property they have access to
+            return jsonify({"error": "Appliance not found or access denied"}), 404
     
     db.session.delete(appliance)
     db.session.commit()

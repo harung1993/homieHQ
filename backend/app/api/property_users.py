@@ -1,5 +1,5 @@
 # api/property_users.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.Property_user import PropertyUser
@@ -113,7 +113,7 @@ def invite_user(property_id):
             db.session.commit()
             
             # Generate invitation URL
-            frontend_url = request.headers.get('Origin', 'http://localhost:3000')
+            frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
             invitation_url = f"{frontend_url}/accept-invitation?token={invitation_token}"
             
             # Send email
@@ -151,7 +151,7 @@ def invite_user(property_id):
         db.session.commit()
         
         # Generate invitation URL
-        frontend_url = request.headers.get('Origin', 'http://localhost:3000')
+        frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
         invitation_url = f"{frontend_url}/accept-invitation?token={invitation_token}"
         
         # Send email
@@ -190,7 +190,7 @@ def invite_user(property_id):
         db.session.commit()
         
         # Generate invitation URL for registration
-        frontend_url = request.headers.get('Origin', 'http://localhost:3000')
+        frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
         invitation_url = f"{frontend_url}/register?invitation={invitation_token}"
         
         # Send email inviting them to register

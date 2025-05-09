@@ -9,12 +9,14 @@ from app.models.document import Document
 from app.models.user import User
 from app.models.tenant import Tenant
 from app.models.property import Property
-from datetime import datetime
+from app.models.Property_user import PropertyUser
+from datetime import datetime, timedelta
 from app.utils.constants import DOCUMENT_CATEGORIES, EXPIRING_DOCUMENT_CATEGORIES
+
 
 documents_bp = Blueprint('documents', __name__)
 
-ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'txt'}
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'txt', 'csv'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -44,6 +46,15 @@ def get_documents():
     
     result = []
     for doc in documents:
+        # Generate URL based on file path
+        filename = os.path.basename(doc.file_path)
+        
+        # Determine the URL based on document association
+        if doc.property_id:
+            url = f"/uploads/documents/files/property_{doc.property_id}/{filename}"
+        else:
+            url = f"/uploads/documents/files/user_{current_user_id}/{filename}"
+        
         result.append({
             'id': doc.id,
             'title': doc.title,
@@ -55,7 +66,8 @@ def get_documents():
             'updated_at': doc.updated_at.isoformat(),
             'property_id': doc.property_id,
             'tenant_id': doc.tenant_id,
-            'expiration_date': doc.expiration_date.isoformat() if doc.expiration_date else None
+            'expiration_date': doc.expiration_date.isoformat() if doc.expiration_date else None,
+            'url': url  # Add URL to the response
         })
     
     return jsonify(result)
@@ -65,7 +77,6 @@ def get_documents():
 def upload_document():
     """Upload a new document"""
     current_user_id = int(get_jwt_identity())
-
     
     # Check if request has the file
     if 'file' not in request.files:
@@ -81,12 +92,8 @@ def upload_document():
     if not allowed_file(file.filename):
         return jsonify({"error": f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
     
-    # Secure the filename and generate a unique filename
-    filename = secure_filename(file.filename)
-    unique_filename = f"{uuid.uuid4()}_{filename}"
-    
-    UPLOAD_FOLDER = os.path.join(current_app.root_path, 'uploads/documents')
-    file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+    # Get base upload folder
+    base_upload_folder = os.path.join(current_app.root_path, 'uploads/documents')
     
     # Get form data
     title = request.form.get('title')
@@ -102,11 +109,40 @@ def upload_document():
     if not category:
         return jsonify({"error": "Category is required"}), 400
     
+    # If a property_id is provided, verify the user has access to it
+    if property_id:
+        property_user = PropertyUser.query.filter_by(
+            property_id=property_id,
+            user_id=current_user_id,
+            status='active'
+        ).first()
+        
+        if not property_user or property_user.role not in ['owner', 'manager']:
+            return jsonify({"error": "Property not found or you don't have permission to upload documents"}), 403
+            
+        # Get the property (still needed for validation)
+        property = Property.query.get(property_id)
+        if not property:
+            return jsonify({"error": "Property not found"}), 404
+        
+        # Create property-specific folder
+        files_folder = os.path.join(base_upload_folder, 'files', f"property_{property_id}")
+        os.makedirs(files_folder, exist_ok=True)
+    else:
+        # If no property, use a user-specific folder
+        files_folder = os.path.join(base_upload_folder, 'files', f"user_{current_user_id}")
+        os.makedirs(files_folder, exist_ok=True)
+    
     # Validate tenant_id if provided
     if tenant_id:
         tenant = Tenant.query.filter_by(id=tenant_id, user_id=current_user_id).first()
         if not tenant:
             return jsonify({"error": "Tenant not found or access denied"}), 404
+    
+    # Secure the filename and generate a unique filename
+    filename = secure_filename(file.filename)
+    unique_filename = f"{uuid.uuid4()}_{filename}"
+    file_path = os.path.join(files_folder, unique_filename)
     
     # Save the file
     file.save(file_path)
@@ -132,9 +168,16 @@ def upload_document():
     db.session.add(new_document)
     db.session.commit()
     
+    # Determine the relative path for API responses
+    if property_id:
+        relative_path = f"/uploads/documents/files/property_{property_id}/{unique_filename}"
+    else:
+        relative_path = f"/uploads/documents/files/user_{current_user_id}/{unique_filename}"
+    
     return jsonify({
         'id': new_document.id,
         'title': new_document.title,
+        'url': relative_path,
         'message': 'Document uploaded successfully'
     }), 201
 
@@ -143,11 +186,26 @@ def upload_document():
 def update_document(document_id):
     """Update document metadata"""
     current_user_id = int(get_jwt_identity())
-
     
-    document = Document.query.filter_by(id=document_id, user_id=current_user_id).first()
+    document = Document.query.filter_by(id=document_id).first()
     if not document:
-        return jsonify({"error": "Document not found or access denied"}), 404
+        return jsonify({"error": "Document not found"}), 404
+    
+    # Check if document belongs to user or if user has property permissions
+    if document.user_id != current_user_id:
+        # If document is associated with a property, check property permissions
+        if document.property_id:
+            property_user = PropertyUser.query.filter_by(
+                property_id=document.property_id,
+                user_id=current_user_id,
+                status='active'
+            ).first()
+            
+            if not property_user or property_user.role not in ['owner', 'manager']:
+                return jsonify({"error": "You don't have permission to update this document"}), 403
+        else:
+            # Not user's document and not associated with a property they have access to
+            return jsonify({"error": "Document not found or access denied"}), 404
     
     data = request.get_json()
     
@@ -176,9 +234,19 @@ def update_document(document_id):
     
     db.session.commit()
     
+    # Get the filename from the file path
+    filename = os.path.basename(document.file_path)
+    
+    # Generate URL for the response
+    if document.property_id:
+        url = f"/uploads/documents/files/property_{document.property_id}/{filename}"
+    else:
+        url = f"/uploads/documents/files/user_{current_user_id}/{filename}"
+    
     return jsonify({
         'id': document.id,
         'title': document.title,
+        'url': url,
         'message': 'Document updated successfully'
     })
 
@@ -187,11 +255,26 @@ def update_document(document_id):
 def delete_document(document_id):
     """Delete a document"""
     current_user_id = int(get_jwt_identity())
-
     
-    document = Document.query.filter_by(id=document_id, user_id=current_user_id).first()
+    document = Document.query.filter_by(id=document_id).first()
     if not document:
-        return jsonify({"error": "Document not found or access denied"}), 404
+        return jsonify({"error": "Document not found"}), 404
+    
+    # Check if document belongs to user or if user has property permissions
+    if document.user_id != current_user_id:
+        # If document is associated with a property, check property permissions
+        if document.property_id:
+            property_user = PropertyUser.query.filter_by(
+                property_id=document.property_id,
+                user_id=current_user_id,
+                status='active'
+            ).first()
+            
+            if not property_user or property_user.role not in ['owner', 'manager']:
+                return jsonify({"error": "You don't have permission to delete this document"}), 403
+        else:
+            # Not user's document and not associated with a property they have access to
+            return jsonify({"error": "Document not found or access denied"}), 404
     
     # Delete the file from storage
     if os.path.exists(document.file_path):
@@ -210,11 +293,27 @@ def delete_document(document_id):
 def download_document(document_id):
     """Download a document"""
     current_user_id = int(get_jwt_identity())
-
     
-    document = Document.query.filter_by(id=document_id, user_id=current_user_id).first()
+    document = Document.query.filter_by(id=document_id).first()
     if not document:
-        return jsonify({"error": "Document not found or access denied"}), 404
+        return jsonify({"error": "Document not found"}), 404
+    
+    # Check if document belongs to user or if user has property permissions
+    if document.user_id != current_user_id:
+        # If document is associated with a property, check property permissions
+        if document.property_id:
+            property_user = PropertyUser.query.filter_by(
+                property_id=document.property_id,
+                user_id=current_user_id,
+                status='active'
+            ).first()
+            
+            # For downloading, we might want to allow tenants too
+            if not property_user or property_user.role not in ['owner', 'manager', 'tenant']:
+                return jsonify({"error": "You don't have permission to download this document"}), 403
+        else:
+            # Not user's document and not associated with a property they have access to
+            return jsonify({"error": "Document not found or access denied"}), 404
     
     # Check if file exists
     if not os.path.exists(document.file_path):
@@ -227,7 +326,6 @@ def download_document(document_id):
 def get_tenant_documents(tenant_id):
     """Get all documents for a specific tenant"""
     current_user_id = int(get_jwt_identity())
-
     
     # Verify tenant exists and belongs to the user
     tenant = Tenant.query.filter_by(id=tenant_id, user_id=current_user_id).first()
@@ -242,6 +340,10 @@ def get_tenant_documents(tenant_id):
     
     result = []
     for doc in documents:
+        # Generate URL for the document
+        filename = os.path.basename(doc.file_path)
+        url = f"/uploads/documents/files/property_{doc.property_id}/{filename}"
+        
         result.append({
             'id': doc.id,
             'title': doc.title,
@@ -253,7 +355,8 @@ def get_tenant_documents(tenant_id):
             'updated_at': doc.updated_at.isoformat(),
             'property_id': doc.property_id,
             'tenant_id': doc.tenant_id,
-            'expiration_date': doc.expiration_date.isoformat() if doc.expiration_date else None
+            'expiration_date': doc.expiration_date.isoformat() if doc.expiration_date else None,
+            'url': url  # Add URL to the response
         })
     
     return jsonify(result)
@@ -268,7 +371,7 @@ def get_expiring_documents():
     
     # Calculate the date threshold
     today = datetime.now().date()
-    expiration_threshold = today + datetime.timedelta(days=days)
+    expiration_threshold = today + timedelta(days=days)
     
     # Get documents that have an expiration date and are expiring within the threshold
     documents = Document.query.filter(
@@ -280,6 +383,13 @@ def get_expiring_documents():
     
     result = []
     for doc in documents:
+        # Generate URL for the document
+        filename = os.path.basename(doc.file_path)
+        if doc.property_id:
+            url = f"/uploads/documents/files/property_{doc.property_id}/{filename}"
+        else:
+            url = f"/uploads/documents/files/user_{current_user_id}/{filename}"
+        
         result.append({
             'id': doc.id,
             'title': doc.title,
@@ -288,7 +398,8 @@ def get_expiring_documents():
             'expiration_date': doc.expiration_date.isoformat(),
             'days_until_expiration': (doc.expiration_date - today).days,
             'property_id': doc.property_id,
-            'tenant_id': doc.tenant_id
+            'tenant_id': doc.tenant_id,
+            'url': url  # Add URL to the response
         })
     
     return jsonify(result)
@@ -310,6 +421,13 @@ def get_documents_by_category(category):
     
     result = []
     for doc in documents:
+        # Generate URL for the document
+        filename = os.path.basename(doc.file_path)
+        if doc.property_id:
+            url = f"/uploads/documents/files/property_{doc.property_id}/{filename}"
+        else:
+            url = f"/uploads/documents/files/user_{current_user_id}/{filename}"
+        
         result.append({
             'id': doc.id,
             'title': doc.title,
@@ -321,7 +439,8 @@ def get_documents_by_category(category):
             'updated_at': doc.updated_at.isoformat(),
             'property_id': doc.property_id,
             'tenant_id': doc.tenant_id,
-            'expiration_date': doc.expiration_date.isoformat() if doc.expiration_date else None
+            'expiration_date': doc.expiration_date.isoformat() if doc.expiration_date else None,
+            'url': url  # Add URL to the response
         })
     
     return jsonify(result)
@@ -347,6 +466,13 @@ def search_documents():
     
     result = []
     for doc in documents:
+        # Generate URL for the document
+        filename = os.path.basename(doc.file_path)
+        if doc.property_id:
+            url = f"/uploads/documents/files/property_{doc.property_id}/{filename}"
+        else:
+            url = f"/uploads/documents/files/user_{current_user_id}/{filename}"
+        
         result.append({
             'id': doc.id,
             'title': doc.title,
@@ -358,7 +484,8 @@ def search_documents():
             'updated_at': doc.updated_at.isoformat(),
             'property_id': doc.property_id,
             'tenant_id': doc.tenant_id,
-            'expiration_date': doc.expiration_date.isoformat() if doc.expiration_date else None
+            'expiration_date': doc.expiration_date.isoformat() if doc.expiration_date else None,
+            'url': url  # Add URL to the response
         })
     
     return jsonify(result)

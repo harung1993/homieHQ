@@ -12,12 +12,13 @@ import uuid
 from datetime import datetime, timedelta
 from flask import current_app
 from app.utils.constants import DOCUMENT_CATEGORIES, TENANT_DOCUMENT_CATEGORY_CHOICES
+from app.models.Property_user import PropertyUser
 
 # Create the blueprint
 tenants_bp = Blueprint('tenants', __name__)
 
 # Constants
-ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'txt'}
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'txt','csv'}
 
 # Helper function to check file extension
 def allowed_file(filename):
@@ -78,15 +79,28 @@ def create_tenant():
         if not data.get(field):
             return jsonify({"error": f"Missing required field: {field}"}), 400
     
-    # Verify property exists and belongs to the current user
-    property = Property.query.filter_by(id=data.get('property_id'), user_id=current_user_id).first()
+    # Get property ID from the request
+    property_id = data.get('property_id')
+    
+    # Check if user has permission for this property
+    property_user = PropertyUser.query.filter_by(
+        property_id=property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "Property not found or you don't have permission to add tenants"}), 403
+    
+    # Get the property (still needed for validation)
+    property = Property.query.get(property_id)
     if not property:
-        return jsonify({"error": "Property not found or access denied"}), 404
+        return jsonify({"error": "Property not found"}), 404
     
     # Create new tenant
     new_tenant = Tenant(
         user_id=current_user_id,
-        property_id=data.get('property_id'),
+        property_id=property_id,
         first_name=data.get('first_name'),
         last_name=data.get('last_name'),
         email=data.get('email'),
@@ -149,18 +163,41 @@ def update_tenant(tenant_id):
     """Update a tenant"""
     current_user_id = int(get_jwt_identity())
     
-    tenant = Tenant.query.filter_by(id=tenant_id, user_id=current_user_id).first()
+    # First get the tenant to check
+    tenant = Tenant.query.filter_by(id=tenant_id).first()
     if not tenant:
-        return jsonify({"error": "Tenant not found or access denied"}), 404
+        return jsonify({"error": "Tenant not found"}), 404
+    
+    # Check if user has permission for the property this tenant is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=tenant.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to update this tenant"}), 403
     
     data = request.get_json()
     
-    # If property_id is being updated, verify it exists and belongs to the user
+    # If property_id is being updated, verify user has permission for the new property too
     if 'property_id' in data:
-        property = Property.query.filter_by(id=data['property_id'], user_id=current_user_id).first()
+        new_property_id = data['property_id']
+        new_property_user = PropertyUser.query.filter_by(
+            property_id=new_property_id,
+            user_id=current_user_id,
+            status='active'
+        ).first()
+        
+        if not new_property_user or new_property_user.role not in ['owner', 'manager']:
+            return jsonify({"error": "You don't have permission to move the tenant to the specified property"}), 403
+        
+        # Get the property (for validation)
+        property = Property.query.get(new_property_id)
         if not property:
-            return jsonify({"error": "Property not found or access denied"}), 404
-        tenant.property_id = data['property_id']
+            return jsonify({"error": "Property not found"}), 404
+            
+        tenant.property_id = new_property_id
     
     # Update fields if provided
     if 'first_name' in data:
@@ -216,9 +253,20 @@ def delete_tenant(tenant_id):
     """Delete a tenant"""
     current_user_id = int(get_jwt_identity())
     
-    tenant = Tenant.query.filter_by(id=tenant_id, user_id=current_user_id).first()
+    # First get the tenant
+    tenant = Tenant.query.filter_by(id=tenant_id).first()
     if not tenant:
-        return jsonify({"error": "Tenant not found or access denied"}), 404
+        return jsonify({"error": "Tenant not found"}), 404
+    
+    # Check if user has permission for the property this tenant is associated with
+    property_user = PropertyUser.query.filter_by(
+        property_id=tenant.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to delete this tenant"}), 403
     
     db.session.delete(tenant)
     db.session.commit()
@@ -316,7 +364,6 @@ def search_tenants():
     
     return jsonify(result)
 
-# Document-related endpoints
 @tenants_bp.route('/<int:tenant_id>/documents', methods=['GET'])
 @jwt_required()
 def get_tenant_documents(tenant_id):
@@ -336,6 +383,10 @@ def get_tenant_documents(tenant_id):
     
     result = []
     for doc in documents:
+        # Generate URL for the document
+        filename = os.path.basename(doc.file_path)
+        url = f"/uploads/documents/files/property_{doc.property_id}/{filename}"
+        
         result.append({
             'id': doc.id,
             'title': doc.title,
@@ -346,7 +397,8 @@ def get_tenant_documents(tenant_id):
             'created_at': doc.created_at.isoformat(),
             'updated_at': doc.updated_at.isoformat(),
             'property_id': doc.property_id,
-            'expiration_date': doc.expiration_date.isoformat() if doc.expiration_date else None
+            'expiration_date': doc.expiration_date.isoformat() if doc.expiration_date else None,
+            'url': url  # Add URL to the response
         })
     
     return jsonify(result)
@@ -376,13 +428,6 @@ def upload_tenant_document(tenant_id):
     if not allowed_file(file.filename):
         return jsonify({"error": f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
     
-    # Secure the filename and generate a unique filename
-    filename = secure_filename(file.filename)
-    unique_filename = f"{uuid.uuid4()}_{filename}"
-    
-    UPLOAD_FOLDER = os.path.join(current_app.root_path, 'uploads/documents')
-    file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-    
     # Get form data
     title = request.form.get('title')
     description = request.form.get('description', '')
@@ -395,6 +440,17 @@ def upload_tenant_document(tenant_id):
     if not category:
         return jsonify({"error": "Category is required"}), 400
     
+    # Create property-specific folder for the tenant's documents
+    property_id = tenant.property_id
+    base_upload_folder = os.path.join(current_app.root_path, 'uploads/documents')
+    files_folder = os.path.join(base_upload_folder, 'files', f"property_{property_id}")
+    os.makedirs(files_folder, exist_ok=True)
+    
+    # Secure the filename and generate a unique filename
+    filename = secure_filename(file.filename)
+    unique_filename = f"{uuid.uuid4()}_{filename}"
+    file_path = os.path.join(files_folder, unique_filename)
+    
     # Save the file
     file.save(file_path)
     
@@ -405,7 +461,7 @@ def upload_tenant_document(tenant_id):
     # Create document record
     new_document = Document(
         user_id=current_user_id,
-        property_id=tenant.property_id,
+        property_id=property_id,
         tenant_id=tenant_id,
         title=title,
         description=description,
@@ -419,9 +475,13 @@ def upload_tenant_document(tenant_id):
     db.session.add(new_document)
     db.session.commit()
     
+    # Determine the relative path for API responses
+    relative_path = f"/uploads/documents/files/property_{property_id}/{unique_filename}"
+    
     return jsonify({
         'id': new_document.id,
         'title': new_document.title,
+        'url': relative_path,
         'message': 'Document uploaded successfully for tenant'
     }), 201
 
@@ -507,13 +567,18 @@ def get_tenant_expiring_documents(tenant_id):
     
     result = []
     for doc in documents:
+        # Generate URL for the document
+        filename = os.path.basename(doc.file_path)
+        url = f"/uploads/documents/files/property_{doc.property_id}/{filename}"
+        
         result.append({
             'id': doc.id,
             'title': doc.title,
             'file_type': doc.file_type,
             'category': doc.category,
             'expiration_date': doc.expiration_date.isoformat(),
-            'days_until_expiration': (doc.expiration_date - today).days
+            'days_until_expiration': (doc.expiration_date - today).days,
+            'url': url  # Add URL to the response
         })
     
     return jsonify(result)

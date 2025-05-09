@@ -13,7 +13,7 @@ class Config:
     
     # File upload settings
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max upload size
+    MAX_CONTENT_LENGTH = 200 * 1024 * 1024  # 200MB max upload size
     
     # Email settings (update with actual values in production)
     MAIL_SERVER = os.environ.get('MAIL_SERVER') or 'smtp.gmail.com'
@@ -29,6 +29,8 @@ class Config:
     AWS_REGION = os.environ.get('AWS_REGION') or 'us-east-1'
     S3_BUCKET = os.environ.get('S3_BUCKET') or 'propertypal-documents'
 
+    # for emails 
+    FRONTEND_URL = os.environ.get('FRONTEND_URL') or 'http://localhost:3000'
 
 class DevelopmentConfig(Config):
     """Development configuration"""

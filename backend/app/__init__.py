@@ -28,14 +28,13 @@ def create_app(config_class=Config):
         app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://propertypal:propertypal@db:5432/propertypal'
         print(f"Using default DB URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
     
-    # Handle upload folder configuration
     if os.environ.get('UPLOAD_FOLDER'):
         app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER')
         print(f"Using upload folder from env: {app.config['UPLOAD_FOLDER']}")
     elif not app.config.get('UPLOAD_FOLDER'):
         app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'uploads')
         print(f"Using default upload folder: {app.config['UPLOAD_FOLDER']}")
-    
+        
     app.url_map.strict_slashes = False
     # Initialize extensions with app
     db.init_app(app)
@@ -72,8 +71,34 @@ def create_app(config_class=Config):
     
     @app.route('/uploads/<path:filename>')
     def serve_uploads(filename):
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-    
+        # Make sure we're using the absolute path for UPLOAD_FOLDER
+        upload_folder = app.config['UPLOAD_FOLDER']
+        if not os.path.isabs(upload_folder):
+            upload_folder = os.path.join(app.root_path, upload_folder)
+            
+        full_path = os.path.join(upload_folder, filename)
+        print(f"Requested file: {filename}")
+        print(f"Full path: {full_path}")
+        print(f"File exists: {os.path.exists(full_path)}")
+        
+        if not os.path.exists(full_path):
+            return "File not found", 404
+            
+        # Extract the directory from the full path
+        directory = os.path.dirname(full_path)
+        # Extract just the filename part
+        basename = os.path.basename(full_path)
+        
+        return send_from_directory(directory, basename)
+   
+
+    @app.route('/health', methods=['GET'])
+    def health_check():
+        """Health check endpoint for container orchestration"""
+        return jsonify({"status": "healthy"}), 200
+
+
+
     # Register blueprints for API routes
     from app.api.auth import auth_bp
     from app.api.properties import properties_bp

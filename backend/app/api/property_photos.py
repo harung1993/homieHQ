@@ -7,6 +7,7 @@ import uuid
 from app import db
 from app.models.document import Document
 from app.models.property import Property
+from app.models.Property_user import PropertyUser
 
 property_photos_bp = Blueprint('property_photos', __name__)
 
@@ -36,11 +37,20 @@ def upload_property_photo():
     if not property_id:
         return jsonify({"error": "Property ID is required"}), 400
     
-    # Verify property belongs to current user
-    property = Property.query.filter_by(id=property_id, user_id=current_user_id).first()
+    property_user = PropertyUser.query.filter_by(
+    property_id=property_id,
+    user_id=current_user_id,
+    status='active'
+    ).first()
+
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "Property not found or you don't have permission to upload photos"}), 403
+
+    # Get the property (we still need it for later use)
+    property = Property.query.get(property_id)
     if not property:
-        return jsonify({"error": "Property not found or access denied"}), 404
-    
+        return jsonify({"error": "Property not found"}), 404
+        
     # Check if file type is allowed
     if not allowed_file(file.filename):
         return jsonify({"error": f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
@@ -103,15 +113,24 @@ def get_property_photos(property_id):
     """Get all photos for a specific property"""
     current_user_id = int(get_jwt_identity())
     
-    # Verify property belongs to current user
-    property = Property.query.filter_by(id=property_id, user_id=current_user_id).first()
-    if not property:
+    # Verify user has access to this property
+    property_user = PropertyUser.query.filter_by(
+        property_id=property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user:
         return jsonify({"error": "Property not found or access denied"}), 404
+    
+    # Get the property
+    property = Property.query.get(property_id)
+    if not property:
+        return jsonify({"error": "Property not found"}), 404
     
     # Query documents that are photos for this property
     photos = Document.query.filter_by(
         property_id=property_id,
-        user_id=current_user_id,
         category='property_photo'
     ).order_by(Document.created_at.desc()).all()
     
@@ -137,14 +156,24 @@ def set_primary_photo(photo_id):
     """Set a photo as the primary photo for a property"""
     current_user_id = int(get_jwt_identity())
     
-    photo = Document.query.filter_by(id=photo_id, user_id=current_user_id, category='property_photo').first()
+    photo = Document.query.filter_by(id=photo_id, category='property_photo').first()
     if not photo:
-        return jsonify({"error": "Photo not found or access denied"}), 404
+        return jsonify({"error": "Photo not found"}), 404
+    
+    # Check if user has permission for this property
+    property_user = PropertyUser.query.filter_by(
+        property_id=photo.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to set the primary photo"}), 403
     
     # Get the property
     property = Property.query.get(photo.property_id)
-    if not property or property.user_id != current_user_id:
-        return jsonify({"error": "Property not found or access denied"}), 404
+    if not property:
+        return jsonify({"error": "Property not found"}), 404
     
     # Extract filename from file_path
     filename = os.path.basename(photo.file_path)
@@ -164,9 +193,19 @@ def delete_property_photo(photo_id):
     """Delete a property photo"""
     current_user_id = int(get_jwt_identity())
     
-    photo = Document.query.filter_by(id=photo_id, user_id=current_user_id, category='property_photo').first()
+    photo = Document.query.filter_by(id=photo_id, category='property_photo').first()
     if not photo:
-        return jsonify({"error": "Photo not found or access denied"}), 404
+        return jsonify({"error": "Photo not found"}), 404
+    
+    # Check if user has permission for this property
+    property_user = PropertyUser.query.filter_by(
+        property_id=photo.property_id,
+        user_id=current_user_id,
+        status='active'
+    ).first()
+    
+    if not property_user or property_user.role not in ['owner', 'manager']:
+        return jsonify({"error": "You don't have permission to delete this photo"}), 403
     
     # Check if this is the primary photo
     property = Property.query.get(photo.property_id)
@@ -186,4 +225,3 @@ def delete_property_photo(photo_id):
     return jsonify({
         'message': 'Photo deleted successfully'
     })
-

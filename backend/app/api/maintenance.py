@@ -5,6 +5,7 @@ from app import db
 from app.models.maintenance import Maintenance
 from app.models.user import User
 from datetime import datetime
+from app.models.Property_user import PropertyUser
 
 maintenance_bp = Blueprint('maintenance', __name__)
 
@@ -56,10 +57,22 @@ def create_maintenance_request():
     if not data or not data.get('title'):
         return jsonify({"error": "Title is required"}), 400
     
+    # If a property_id is provided, check permissions
+    property_id = data.get('property_id')
+    if property_id:
+        property_user = PropertyUser.query.filter_by(
+            property_id=property_id,
+            user_id=current_user_id,
+            status='active'
+        ).first()
+        
+        if not property_user:
+            return jsonify({"error": "Property not found or you don't have permission to create maintenance requests"}), 403
+    
     # Create new maintenance request
     new_request = Maintenance(
         user_id=current_user_id,
-        property_id=data.get('property_id'),
+        property_id=property_id,
         title=data.get('title'),
         description=data.get('description', ''),
         priority=data.get('priority', 'medium'),
@@ -81,11 +94,26 @@ def create_maintenance_request():
 def get_maintenance_request(request_id):
     """Get a specific maintenance request"""
     current_user_id = int(get_jwt_identity())
-
     
-    maintenance_request = Maintenance.query.filter_by(id=request_id, user_id=current_user_id).first()
+    maintenance_request = Maintenance.query.filter_by(id=request_id).first()
     if not maintenance_request:
-        return jsonify({"error": "Maintenance request not found or access denied"}), 404
+        return jsonify({"error": "Maintenance request not found"}), 404
+    
+    # Check if user owns the request or has permission on the property
+    if maintenance_request.user_id != current_user_id:
+        # If associated with a property, check property permissions
+        if maintenance_request.property_id:
+            property_user = PropertyUser.query.filter_by(
+                property_id=maintenance_request.property_id,
+                user_id=current_user_id,
+                status='active'
+            ).first()
+            
+            if not property_user:
+                return jsonify({"error": "You don't have permission to view this maintenance request"}), 403
+        else:
+            # Not user's request and not associated with a property they have access to
+            return jsonify({"error": "Maintenance request not found or access denied"}), 404
     
     result = {
         'id': maintenance_request.id,
@@ -107,11 +135,26 @@ def get_maintenance_request(request_id):
 def update_maintenance_request(request_id):
     """Update a maintenance request"""
     current_user_id = int(get_jwt_identity())
-
     
-    maintenance_request = Maintenance.query.filter_by(id=request_id, user_id=current_user_id).first()
+    maintenance_request = Maintenance.query.filter_by(id=request_id).first()
     if not maintenance_request:
-        return jsonify({"error": "Maintenance request not found or access denied"}), 404
+        return jsonify({"error": "Maintenance request not found"}), 404
+    
+    # Check if user owns the request or has permission on the property
+    if maintenance_request.user_id != current_user_id:
+        # If associated with a property, check property permissions
+        if maintenance_request.property_id:
+            property_user = PropertyUser.query.filter_by(
+                property_id=maintenance_request.property_id,
+                user_id=current_user_id,
+                status='active'
+            ).first()
+            
+            if not property_user or property_user.role not in ['owner', 'manager']:
+                return jsonify({"error": "You don't have permission to update this maintenance request"}), 403
+        else:
+            # Not user's request and not associated with a property they have access to
+            return jsonify({"error": "Maintenance request not found or access denied"}), 404
     
     data = request.get_json()
     
@@ -133,8 +176,20 @@ def update_maintenance_request(request_id):
     if 'due_date' in data and data['due_date']:
         maintenance_request.due_date = datetime.strptime(data['due_date'], '%Y-%m-%d').date()
     
-    if 'property_id' in data:
-        maintenance_request.property_id = data['property_id']
+    # If property_id is being updated, check permissions for new property
+    if 'property_id' in data and data['property_id'] != maintenance_request.property_id:
+        new_property_id = data['property_id']
+        if new_property_id:
+            property_user = PropertyUser.query.filter_by(
+                property_id=new_property_id,
+                user_id=current_user_id,
+                status='active'
+            ).first()
+            
+            if not property_user or property_user.role not in ['owner', 'manager']:
+                return jsonify({"error": "You don't have permission to move this request to the specified property"}), 403
+        
+        maintenance_request.property_id = new_property_id
     
     db.session.commit()
     
@@ -149,11 +204,26 @@ def update_maintenance_request(request_id):
 def delete_maintenance_request(request_id):
     """Delete a maintenance request"""
     current_user_id = int(get_jwt_identity())
-
     
-    maintenance_request = Maintenance.query.filter_by(id=request_id, user_id=current_user_id).first()
+    maintenance_request = Maintenance.query.filter_by(id=request_id).first()
     if not maintenance_request:
-        return jsonify({"error": "Maintenance request not found or access denied"}), 404
+        return jsonify({"error": "Maintenance request not found"}), 404
+    
+    # Check if user owns the request or has permission on the property
+    if maintenance_request.user_id != current_user_id:
+        # If associated with a property, check property permissions
+        if maintenance_request.property_id:
+            property_user = PropertyUser.query.filter_by(
+                property_id=maintenance_request.property_id,
+                user_id=current_user_id,
+                status='active'
+            ).first()
+            
+            if not property_user or property_user.role not in ['owner', 'manager']:
+                return jsonify({"error": "You don't have permission to delete this maintenance request"}), 403
+        else:
+            # Not user's request and not associated with a property they have access to
+            return jsonify({"error": "Maintenance request not found or access denied"}), 404
     
     db.session.delete(maintenance_request)
     db.session.commit()
