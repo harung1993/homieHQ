@@ -1,7 +1,7 @@
 // ResendVerificationEmail.js - Component to handle resending verification emails
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import { apiHelpers } from '../../services/api'; // Changed to apiHelpers
 
 const ResendVerificationEmail = () => {
   const navigate = useNavigate();
@@ -23,8 +23,8 @@ const ResendVerificationEmail = () => {
     }
 
     try {
-      // Call API to resend verification email
-      const response = await api.post('/auth/resend-verification', { email });
+      // Call API to resend verification email - using apiHelpers instead of api
+      const response = await apiHelpers.post('auth/resend-verification', { email });
       
       setMessage(response.message || 'If your email is registered and not verified, a new verification link has been sent.');
       setLoading(false);

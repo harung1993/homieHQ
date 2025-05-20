@@ -1,7 +1,7 @@
 // ForgotPasswordForm.js
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import { apiHelpers } from '../../services/api'; // Changed to apiHelpers
 
 const ForgotPasswordForm = () => {
   const navigate = useNavigate();
@@ -23,8 +23,8 @@ const ForgotPasswordForm = () => {
     }
 
     try {
-      // Call API to request password reset, matching the API documentation
-      const response = await api.post('/auth/forgot-password', { email });
+      // Call API to request password reset, using apiHelpers and correct path
+      const response = await apiHelpers.post('auth/forgot-password', { email });
       
       // API returns a generic success message for security purposes
       setMessage(response.message || 'If an account with that email exists, a password reset link has been sent.');

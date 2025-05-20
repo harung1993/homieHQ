@@ -1,7 +1,7 @@
 // VerifyEmail.js - Component to handle email verification
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import api from '../../services/api';
+import { apiHelpers } from '../../services/api'; // Changed to apiHelpers
 
 const VerifyEmail = () => {
   const navigate = useNavigate();
@@ -23,8 +23,8 @@ const VerifyEmail = () => {
       }
       
       try {
-        // Call API to verify email with the token
-        const response = await api.post('/auth/verify-email', { token });
+        // Call API to verify email with the token - using apiHelpers and fixed path
+        const response = await apiHelpers.post('auth/verify-email', { token });
         
         setVerifying(false);
         setMessage(response.message || 'Email verified successfully. You can now log in to your account.');

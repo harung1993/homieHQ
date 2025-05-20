@@ -4,7 +4,8 @@ import Navigation from '../layout/Navigation';
 import PropertySelector from '../layout/PropertySelector';
 import documentService from '../services/DocumentService';
 import tenantService from '../services/tenantService';
-import { apiHelpers, API_BASE_URL } from '../../services/api';
+import { apiHelpers } from '../../services/api';
+import { getDocumentUrl } from '../services/documentHelper'; // Import new helper
 
 const Documents = () => {
   const navigate = useNavigate();
@@ -178,59 +179,6 @@ const Documents = () => {
   
   const filteredDocuments = getFilteredDocuments();
 
-  // Get document URL with proper formatting - UPDATED FOR PROPERTY PHOTOS
-  const getDocumentUrl = (document) => {
-    if (!document || !document.url) return null;
-    
-    // If it's already a full URL, return it as is
-    if (document.url.startsWith('http')) {
-      return document.url;
-    }
-    
-    // Clean up API_BASE_URL to avoid double slashes
-    const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
-    
-
-    // Check if this is a property photo by category or title
-    const isPropertyPhoto = document.category === 'property_photo' || 
-                           document.title === 'Home Exterior' ||
-                           (document.description && document.description.toLowerCase().includes('property photo'));
-    
-    if (isPropertyPhoto) {
-      // Extract property ID from the document or use current property
-      const propertyId = document.property_id || currentProperty?.id;
-
-      
-      // Specific path for property photos
-      // Clean the URL by removing any leading slashes and any uploads path
-      const fileName = document.url
-        .replace(/^\/+/, '')                     // Remove leading slashes
-        .replace(/^uploads\//, '')              // Remove uploads/ prefix if present
-        .replace(/^documents\/files\/property_\d+\//, '') // Remove documents/files/property_X/ if present
-        .replace(/^documents\/photos\/property_\d+\//, ''); // Remove documents/photos/property_X/ if present
-      
-      const photoUrl = `${baseUrl}/uploads/documents/photos/property_${propertyId}/${fileName}`;
-
-      return photoUrl;
-    }
-    
-    // Regular document URL construction for non-property photos
-    let documentUrl;
-    // Clean URL by removing leading slashes
-    const cleanUrl = document.url.replace(/^\/+/, '');
-    
-    // If URL already includes uploads path
-    if (cleanUrl.includes('uploads/')) {
-      documentUrl = `${baseUrl}/${cleanUrl}`;
-    } else {
-      // Add proper path structure
-      documentUrl = `${baseUrl}/uploads/documents/files/property_${document.property_id || currentProperty?.id}/${cleanUrl}`;
-    }
-    
-    //console.log('Constructed regular document URL:', documentUrl);
-    return documentUrl;
-  };
-
   // Handle file upload with size validation
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -335,16 +283,15 @@ const Documents = () => {
     }
   };
   
-  // Handle document download - Updated to handle property photos correctly
+  // Handle document download - Updated to use the new documentHelper
   const handleDownload = async (document) => {
     try {
       setLoading(true);
       
       // Check if document has the url property
       if (document.url) {
-        // Get full URL with API base (handles property photos differently)
-        const documentUrl = getDocumentUrl(document);
-        //console.log('Downloading from URL:', documentUrl);
+        // Get document URL using the helper
+        const documentUrl = getDocumentUrl(document, currentProperty?.id);
         
         // Create temporary link for download
         const link = document.createElement('a');
@@ -360,7 +307,7 @@ const Documents = () => {
         // Fallback for documents without url property
         if (document.source === 'tenant') {
           // Download tenant document through tenant service
-          //console.log(`Downloading tenant document ${document.id} for tenant ${document.tenant_id}`);
+          console.log(`Downloading tenant document ${document.id} for tenant ${document.tenant_id}`);
           setMessage('Tenant document downloaded successfully!');
           setLoading(false);
         } else {
@@ -764,7 +711,7 @@ const Documents = () => {
                     {/* Use the URL directly if available */}
                     {doc.url ? (
                       <a 
-                        href={getDocumentUrl(doc)}
+                        href={getDocumentUrl(doc, currentProperty?.id)}
                         className="text-secondary hover:text-secondary-light text-sm"
                         download={doc.title}
                         target="_blank"

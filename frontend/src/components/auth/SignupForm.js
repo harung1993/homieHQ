@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
-import { API_BASE_URL } from '../../services/api'; // Import base URL
+import { apiHelpers } from '../../services/api'; // Import apiHelpers instead of API_BASE_URL
 
 const SignupForm = () => {
   const navigate = useNavigate();
@@ -32,22 +31,16 @@ const SignupForm = () => {
     setMessage('');
 
     try {
-      // Use direct axios with full URL for debugging
-      const fullUrl = `${API_BASE_URL}/api/auth/register`;
-      console.log("Attempting to register at:", fullUrl);
-      console.log("Form data:", formData);
+      // Use apiHelpers instead of direct axios call
+      console.log("Attempting to register with data:", formData);
       
-      const response = await axios.post(fullUrl, formData, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await apiHelpers.post('auth/register', formData);
       
       setLoading(false);
-      console.log("Registration successful:", response.data);
+      console.log("Registration successful:", response);
       
       // Updated to handle email verification flow
-      setMessage(response.data.message || 
+      setMessage(response.message || 
         'Registration successful! Please check your email to verify your account before logging in.');
       
       // Store email for potential resending of verification

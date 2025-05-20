@@ -1,7 +1,7 @@
 // ResetPasswordForm.js
 import React, { useState } from 'react';
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
-import api from '../../services/api';
+import { apiHelpers } from '../../services/api'; // Import apiHelpers instead of api
 
 const ResetPasswordForm = () => {
   const navigate = useNavigate();
@@ -56,8 +56,8 @@ const ResetPasswordForm = () => {
         return;
       }
       
-      // Call API to reset password, matching the API documentation
-      const response = await api.post('/auth/reset-password', { 
+      // Call API to reset password using apiHelpers and correct path without leading slash
+      const response = await apiHelpers.post('auth/reset-password', { 
         token: resetToken,
         password: formData.password
       });

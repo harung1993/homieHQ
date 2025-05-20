@@ -1,35 +1,34 @@
 import axios from 'axios';
 
-// Add proper protocol to URLs without one
-const addProtocol = (url) => {
-  if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
-    return `http://${url}`;
-  }
-  return url;
-};
-
 // Get runtime config from global `window` object
-const runtimeApiUrl = window?.REACT_APP_API_URL || '';
+// Look for window.REACT_APP_API_URL first, then the placeholder which will be replaced at runtime
+const runtimeApiUrl = window?.REACT_APP_API_URL || '__API_URL_PLACEHOLDER__' || '';
+console.log('Runtime API URL:', runtimeApiUrl);
 
-// Convert Docker service name 'web' to localhost for browser environment
+// Determine the base URL for the API
 let rawBaseUrl;
 if (runtimeApiUrl.includes('web:')) {
   // Replace 'web' hostname with 'localhost' for browser environment
   rawBaseUrl = runtimeApiUrl.replace('web:', 'localhost:');
   console.log('Converted Docker service name to localhost:', rawBaseUrl);
+} else if (runtimeApiUrl) {
+  // Use the runtime API URL if provided
+  rawBaseUrl = runtimeApiUrl;
 } else {
-  rawBaseUrl = runtimeApiUrl || 'http://localhost:5008/api';
+  // Use a relative URL as fallback - this will work with Cloudflare tunnels
+  rawBaseUrl = '/api';
 }
 
-// Normalize and clean base URL
+// IMPORTANT: Keep the API_BASE_URL export for backward compatibility
+// This should match how it was originally calculated
 export const API_BASE_URL = rawBaseUrl.endsWith('/api')
   ? rawBaseUrl.slice(0, -4)
   : rawBaseUrl;
 
-const BASE_URL = addProtocol(rawBaseUrl);
+// BASE_URL should just be '/' for proper request routing
+const BASE_URL = '/';
 
 console.log('API Base URL:', BASE_URL);
-
 
 // Create an axios instance with default settings
 const api = axios.create({
@@ -38,14 +37,14 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true, // Include cookies in cross-origin requests if needed
-  timeout: 30000, // 30 second timeout
+  timeout: 60000, // Increased to 60 second timeout
 });
 
-// Helper function to ensure consistent trailing slashes
-const normalizeUrl = (url) => {
-  // Add trailing slash if not present and not empty
-  if (url && !url.endsWith('/') && !url.includes('?')) {
-    return `${url}/`;
+// Helper function to ensure proper URL formatting for API requests
+const formatApiUrl = (url) => {
+  // All API calls should be prefixed with /api
+  if (url && !url.startsWith('/api/')) {
+    return `/api/${url.startsWith('/') ? url.substring(1) : url}`;
   }
   return url;
 };
@@ -53,17 +52,20 @@ const normalizeUrl = (url) => {
 // Add a request interceptor to add the auth token to requests
 api.interceptors.request.use(
   (config) => {
-    // Normalize URL to include trailing slash
-    config.url = normalizeUrl(config.url);
+    // Format API URL with prefix and ensure trailing slash if needed
+    config.url = formatApiUrl(config.url);
+    
+    // Add trailing slash if not present and not a query parameter
+    if (config.url && !config.url.endsWith('/') && !config.url.includes('?')) {
+      config.url = `${config.url}/`;
+    }
+    
+    // Log every request for debugging
+    console.log('Making API request to:', config.url);
     
     const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    
-    // Ensure all IDs in the request data are strings when needed for JWT
-    if (config.method === 'post' && config.url.includes('auth/login')) {
-     
     }
     
     return config;
@@ -100,7 +102,10 @@ api.interceptors.response.use(
 const apiHelpers = {
   get: (url, params = {}) => {
     return api.get(url, { params })
-      .then(response => response.data);
+      .then(response => {
+        console.log('GET response for:', url, response.data);
+        return response.data;
+      });
   },
   
   post: (url, data = {}) => {
@@ -108,17 +113,26 @@ const apiHelpers = {
     console.log('API POST request to:', url);
     
     return api.post(url, data)
-      .then(response => response.data);
+      .then(response => {
+        console.log('POST response for:', url, response.data);
+        return response.data;
+      });
   },
   
   put: (url, data = {}) => {
     return api.put(url, data)
-      .then(response => response.data);
+      .then(response => {
+        console.log('PUT response for:', url, response.data);
+        return response.data;
+      });
   },
   
   delete: (url) => {
     return api.delete(url)
-      .then(response => response.data);
+      .then(response => {
+        console.log('DELETE response for:', url, response.data);
+        return response.data;
+      });
   },
   
   upload: (url, formData) => {
@@ -126,13 +140,19 @@ const apiHelpers = {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
-    }).then(response => response.data);
+    }).then(response => {
+      console.log('UPLOAD response for:', url, response.data);
+      return response.data;
+    });
   },
   
   download: (url) => {
     return api.get(url, {
       responseType: 'blob'
-    }).then(response => response.data);
+    }).then(response => {
+      console.log('DOWNLOAD response for:', url);
+      return response.data;
+    });
   }
 };
 

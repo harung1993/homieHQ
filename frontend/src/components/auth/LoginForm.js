@@ -1,7 +1,7 @@
 // Updated LoginForm.js with prominent resend verification option and no dev mode button
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import api from '../../services/api';
+import { apiHelpers } from '../../services/api'; // Changed to apiHelpers
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -35,8 +35,8 @@ const LoginForm = () => {
     setMessage('');
 
     try {
-      // Use the API service instead of direct axios calls
-      const response = await api.post('/auth/login', formData);
+      // Use apiHelpers instead of direct api call
+      const response = await apiHelpers.post('auth/login', formData);
       
       setLoading(false);
       
