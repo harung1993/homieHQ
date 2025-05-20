@@ -51,6 +51,10 @@ RUN chmod +x /app/entrypoint.sh
 RUN mkdir -p /app/uploads/documents/photos && \
     chmod -R 755 /app/uploads
 
+
+COPY reset_app.py /app/reset_app.py
+RUN chmod +x /app/reset_app.py
+
 # Copy the application code
 COPY . .
 
