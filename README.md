@@ -2,7 +2,8 @@
 
 HomieHQ is a comprehensive property management system that helps homeowners and landlords manage their properties, maintenance tasks, tenants, documents, and finances in one centralized platform.
 
-![HomieHQ Dashboard](https://github.com/harung43/homieHQ/raw/main/frontend/public/dashboard-preview.png)
+![Screenshot 2025-05-20 at 1 41 39 PM](https://github.com/user-attachments/assets/4c41fef5-7bb0-43a4-8f95-a709afa7eb04)
+
 
 ## 🚀 Features
 
