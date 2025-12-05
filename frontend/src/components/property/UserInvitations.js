@@ -74,7 +74,7 @@ const UserInvitations = ({ setMessage, setError }) => {
       case 'owner':
         return 'bg-blue-900 bg-opacity-30 text-blue-300';
       case 'manager':
-        return 'bg-teal-900 bg-opacity-30 text-teal-300';
+        return 'bg-sky-900 bg-opacity-30 text-sky-200';
       case 'tenant':
         return 'bg-purple-900 bg-opacity-30 text-purple-300';
       default:

@@ -9,11 +9,13 @@ module.exports = {
       colors: {
         background: '#1F2937',
         'card-bg': '#2D3748',
-        primary: '#2C5282',  // Blue shade
-        secondary: '#38B2AC', // Teal shade
+        primary: '#38bdf8',  // Sky blue primary
+        secondary: '#3b82f6', // Blue secondary
         accent: '#ED8936',   // Orange shade
-        'home-color': '#38B2AC', // Teal for "Home" text
-        'property-color': '#4299E1', // Blue for "Property" text
+        'property-primary': '#38bdf8', // Sky blue for PropertyPal
+        'property-secondary': '#3b82f6', // Blue secondary for PropertyPal
+        'property-light': '#f0f9ff', // Light sky blue
+        'property-color': '#38bdf8', // Sky blue for "Property" text
         text: '#E5E7EB',
         'text-dark': '#9CA3AF',
         'input-bg': '#374151',
@@ -21,6 +23,9 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+      },
+      backgroundImage: {
+        'property-gradient': 'linear-gradient(to bottom right, #38bdf8, #3b82f6)',
       },
     },
   },

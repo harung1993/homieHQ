@@ -1,9 +1,9 @@
-/* HomeOwnerPal specific styles */
+/* PropertyPal specific styles */
 :root {
-  --primary: #2C5282;
-  --secondary: #38B2AC;
+  --primary: #38bdf8;
+  --secondary: #3b82f6;
   --accent: #ED8936;
-  --home-color: #38B2AC; /* Teal color for "Home" */
+  --homie-color: #3b82f6; /* Teal color for "Home" */
   --background: #1F2937;
   --card-bg: #2D3748;
   --text: #E5E7EB;
@@ -69,8 +69,8 @@ body::before {
   color: var(--accent);
 }
 
-.home-text {
-  color: var(--home-color);
+.homie-text {
+  color: var(--homie-color);
 }
 
 .accent-border {

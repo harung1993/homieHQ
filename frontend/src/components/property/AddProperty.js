@@ -162,7 +162,7 @@ const SimpleAddProperty = () => {
               <input 
                 type="checkbox" 
                 name="is_primary_residence" 
-                className="h-4 w-4 text-teal-500 rounded bg-gray-700 border-gray-600" 
+                className="h-4 w-4 text-sky-400 rounded bg-gray-700 border-gray-600" 
               />
               <span className="ml-2 text-gray-300">Set as primary residence</span>
             </label>

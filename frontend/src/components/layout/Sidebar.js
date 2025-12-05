@@ -60,7 +60,7 @@ const Sidebar = ({ isOpen, closeSidebar, currentProperty }) => {
           <div className="px-4 mb-6">
             <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">My Home</h5>
             {currentProperty && (
-              <p className="text-xs text-teal-500 mt-1" id="current-property-address">
+              <p className="text-xs text-sky-400 mt-1" id="current-property-address">
                 {currentProperty.address}
               </p>
             )}

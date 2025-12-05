@@ -377,7 +377,7 @@ const Settings = () => {
               <nav className="flex flex-col space-y-1">
                 <button
                   className={`px-4 py-2 rounded-md text-left flex items-center ${
-                    activeTab === 'account' ? 'bg-teal-900 bg-opacity-20 text-teal-500' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
+                    activeTab === 'account' ? 'bg-sky-900 bg-opacity-20 text-sky-400' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
                   }`}
                   onClick={() => setActiveTab('account')}
                 >
@@ -389,7 +389,7 @@ const Settings = () => {
                 
                 <button
                   className={`px-4 py-2 rounded-md text-left flex items-center ${
-                    activeTab === 'password' ? 'bg-teal-900 bg-opacity-20 text-teal-500' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
+                    activeTab === 'password' ? 'bg-sky-900 bg-opacity-20 text-sky-400' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
                   }`}
                   onClick={() => setActiveTab('password')}
                 >
@@ -401,7 +401,7 @@ const Settings = () => {
 
                 <button
                   className={`px-4 py-2 rounded-md text-left flex items-center ${
-                    activeTab === 'property' ? 'bg-teal-900 bg-opacity-20 text-teal-500' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
+                    activeTab === 'property' ? 'bg-sky-900 bg-opacity-20 text-sky-400' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
                   }`}
                   onClick={() => setActiveTab('property')}
                 >
@@ -414,7 +414,7 @@ const Settings = () => {
                 {/* New Property Users Tab */}
                 <button
                   className={`px-4 py-2 rounded-md text-left flex items-center ${
-                    activeTab === 'users' ? 'bg-teal-900 bg-opacity-20 text-teal-500' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
+                    activeTab === 'users' ? 'bg-sky-900 bg-opacity-20 text-sky-400' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
                   }`}
                   onClick={() => setActiveTab('users')}
                 >
@@ -426,7 +426,7 @@ const Settings = () => {
                 
                 <button
                   className={`px-4 py-2 rounded-md text-left flex items-center ${
-                    activeTab === 'notifications' ? 'bg-teal-900 bg-opacity-20 text-teal-500' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
+                    activeTab === 'notifications' ? 'bg-sky-900 bg-opacity-20 text-sky-400' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
                   }`}
                   onClick={() => setActiveTab('notifications')}
                 >
@@ -438,7 +438,7 @@ const Settings = () => {
                 
                 <button
                   className={`px-4 py-2 rounded-md text-left flex items-center ${
-                    activeTab === 'appearance' ? 'bg-teal-900 bg-opacity-20 text-teal-500' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
+                    activeTab === 'appearance' ? 'bg-sky-900 bg-opacity-20 text-sky-400' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
                   }`}
                   onClick={() => setActiveTab('appearance')}
                 >
@@ -450,7 +450,7 @@ const Settings = () => {
 
                 <button
                   className={`px-4 py-2 rounded-md text-left flex items-center ${
-                    activeTab === 'timezone' ? 'bg-teal-900 bg-opacity-20 text-teal-500' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
+                    activeTab === 'timezone' ? 'bg-sky-900 bg-opacity-20 text-sky-400' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
                   }`}
                   onClick={() => setActiveTab('timezone')}
                 >
@@ -462,7 +462,7 @@ const Settings = () => {
                 
                 <button
                   className={`px-4 py-2 rounded-md text-left flex items-center ${
-                    activeTab === 'data' ? 'bg-teal-900 bg-opacity-20 text-teal-500' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
+                    activeTab === 'data' ? 'bg-sky-900 bg-opacity-20 text-sky-400' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
                   }`}
                   onClick={() => setActiveTab('data')}
                 >
@@ -628,7 +628,7 @@ const Settings = () => {
                         
                         {loadingProperties ? (
                           <div className="flex items-center mt-2">
-                            <svg className="animate-spin h-5 w-5 text-teal-500 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin h-5 w-5 text-sky-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -661,7 +661,7 @@ const Settings = () => {
                         )}
                         
                         {properties.length > 0 && primaryResidenceId && (
-                          <div className="mt-2 flex items-center text-sm text-teal-500">
+                          <div className="mt-2 flex items-center text-sm text-sky-400">
                             <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                             </svg>
@@ -702,7 +702,7 @@ const Settings = () => {
                               onChange={handleNotificationChange}
                               className="sr-only" 
                             />
-                            <div className={`block w-10 h-6 rounded-full ${notificationSettings.email_notifications ? 'bg-teal-500' : 'bg-gray-600'}`}></div>
+                            <div className={`block w-10 h-6 rounded-full ${notificationSettings.email_notifications ? 'bg-sky-400' : 'bg-gray-600'}`}></div>
                             <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition ${notificationSettings.email_notifications ? 'transform translate-x-4' : ''}`}></div>
                           </div>
                         </label>
@@ -723,7 +723,7 @@ const Settings = () => {
                               onChange={handleNotificationChange}
                               className="sr-only" 
                             />
-                            <div className={`block w-10 h-6 rounded-full ${notificationSettings.maintenance_reminders ? 'bg-teal-500' : 'bg-gray-600'}`}></div>
+                            <div className={`block w-10 h-6 rounded-full ${notificationSettings.maintenance_reminders ? 'bg-sky-400' : 'bg-gray-600'}`}></div>
                             <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition ${notificationSettings.maintenance_reminders ? 'transform translate-x-4' : ''}`}></div>
                           </div>
                         </label>
@@ -743,7 +743,7 @@ const Settings = () => {
                               onChange={handleNotificationChange}
                               className="sr-only" 
                             />
-                            <div className={`block w-10 h-6 rounded-full ${notificationSettings.payment_reminders ? 'bg-teal-500' : 'bg-gray-600'}`}></div>
+                            <div className={`block w-10 h-6 rounded-full ${notificationSettings.payment_reminders ? 'bg-sky-400' : 'bg-gray-600'}`}></div>
                             <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition ${notificationSettings.payment_reminders ? 'transform translate-x-4' : ''}`}></div>
                           </div>
                         </label>
@@ -763,7 +763,7 @@ const Settings = () => {
                               onChange={handleNotificationChange}
                               className="sr-only" 
                             />
-                            <div className={`block w-10 h-6 rounded-full ${notificationSettings.project_updates ? 'bg-teal-500' : 'bg-gray-600'}`}></div>
+                            <div className={`block w-10 h-6 rounded-full ${notificationSettings.project_updates ? 'bg-sky-400' : 'bg-gray-600'}`}></div>
                             <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition ${notificationSettings.project_updates ? 'transform translate-x-4' : ''}`}></div>
                           </div>
                         </label>
@@ -783,7 +783,7 @@ const Settings = () => {
                               onChange={handleNotificationChange}
                               className="sr-only" 
                             />
-                            <div className={`block w-10 h-6 rounded-full ${notificationSettings.document_updates ? 'bg-teal-500' : 'bg-gray-600'}`}></div>
+                            <div className={`block w-10 h-6 rounded-full ${notificationSettings.document_updates ? 'bg-sky-400' : 'bg-gray-600'}`}></div>
                             <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition ${notificationSettings.document_updates ? 'transform translate-x-4' : ''}`}></div>
                           </div>
                         </label>
@@ -813,7 +813,7 @@ const Settings = () => {
                         <label className="form-label">Theme</label>
                         <div className="grid grid-cols-2 gap-4 mt-2">
                           <label className={`flex flex-col items-center border rounded-md p-4 cursor-pointer transition ${
-                            appearanceSettings.theme === 'dark' ? 'border-teal-500 bg-teal-900 bg-opacity-10' : 'border-gray-700 hover:border-gray-600'
+                            appearanceSettings.theme === 'dark' ? 'border-sky-400 bg-sky-900 bg-opacity-10' : 'border-gray-700 hover:border-gray-600'
                           }`}>
                             <input 
                               type="radio" 
@@ -830,7 +830,7 @@ const Settings = () => {
                           </label>
                           
                           <label className={`flex flex-col items-center border rounded-md p-4 cursor-pointer transition ${
-                            appearanceSettings.theme === 'light' ? 'border-teal-500 bg-teal-900 bg-opacity-10' : 'border-gray-700 hover:border-gray-600'
+                            appearanceSettings.theme === 'light' ? 'border-sky-400 bg-sky-900 bg-opacity-10' : 'border-gray-700 hover:border-gray-600'
                           }`}>
                             <input 
                               type="radio" 
@@ -923,7 +923,7 @@ const Settings = () => {
                   <div className="space-y-8">
                     <div>
                       <h3 className="text-lg font-medium mb-2">Data Export</h3>
-                      <p className="text-gray-400 mb-4">Download a copy of your HomieHQ data</p>
+                      <p className="text-gray-400 mb-4">Download a copy of your PropertyPal data</p>
                       <button className="btn-secondary text-sm px-4 py-2 rounded-md">
                         <svg className="h-4 w-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path>

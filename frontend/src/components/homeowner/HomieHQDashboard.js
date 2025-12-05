@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import Navigation from '../layout/Navigation';
 import PropertySelector from '../layout/PropertySelector';
@@ -36,6 +36,191 @@ const HomeOwnerDashboard = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Fetch home photos
+  const fetchHomePhotos = useCallback(async (propertyId) => {
+    try {
+      if (!propertyId) return;
+
+      console.log(`Fetching photos for property ID: ${propertyId}`);
+
+      const photos = await apiHelpers.get(`property_photos/${propertyId}`);
+
+      console.log('Photo API response:', photos);
+
+      // Check if we got any photos back
+      if (!photos || photos.length === 0) {
+        console.log('No photos returned from API');
+        setHomePhotos([]);
+        return;
+      }
+
+      // Process photos and add full URLs
+      const photosWithFullUrl = photos.map(photo => {
+        let fullUrl = photo.url;
+
+        // If the URL doesn't start with http, prepend the API base URL
+        if (fullUrl && !fullUrl.startsWith('http')) {
+          // Remove leading slash if present to avoid double slashes
+          if (fullUrl.startsWith('/')) {
+            fullUrl = fullUrl.substring(1);
+          }
+
+          fullUrl = API_BASE_URL + fullUrl;
+        }
+
+        console.log(`Original URL: ${photo.url}, Full URL: ${fullUrl}`);
+
+        return {
+          ...photo,
+          url: fullUrl
+        };
+      });
+
+      console.log('Photos with full URLs:', photosWithFullUrl);
+      setHomePhotos(photosWithFullUrl);
+    } catch (err) {
+      console.error('Error fetching home photos:', err);
+      console.error('Error details:', err.response ? err.response.data : err.message);
+      setHomePhotos([]);
+    }
+  }, []);
+
+  // Fetch dashboard data from all services
+  const fetchDashboardData = useCallback(async (propertyId) => {
+    setLoadingDashboardData(true);
+    console.log(`Fetching dashboard data for property ID: ${propertyId}`);
+
+    try {
+      // Fetch maintenance items (limited to pending items)
+      try {
+        console.log('Fetching maintenance items...');
+        const maintenanceItems = await apiHelpers.get('maintenance/', {
+          status: 'pending',
+          property_id: propertyId
+        });
+
+        console.log('Maintenance response:', maintenanceItems);
+
+        if (maintenanceItems && Array.isArray(maintenanceItems)) {
+          setMaintenanceItems(maintenanceItems);
+        } else {
+          // API returned unexpected format
+          console.error('Unexpected maintenance data format:', maintenanceItems);
+          setMaintenanceItems([]);
+        }
+      } catch (err) {
+        console.error('Error fetching maintenance items:', err);
+        setMaintenanceItems([]);
+      }
+
+      // Fetch appliances
+      try {
+        console.log('Fetching appliances...');
+        const appliances = await apiHelpers.get('appliances/', { property_id: propertyId });
+        console.log('Appliances response:', appliances);
+
+        if (appliances && Array.isArray(appliances)) {
+          setAppliances(appliances);
+        } else {
+          console.error('Unexpected appliances data format:', appliances);
+          setAppliances([]);
+        }
+      } catch (err) {
+        console.error('Error fetching appliances:', err);
+        setAppliances([]);
+      }
+
+      // Fetch documents
+      try {
+        console.log('Fetching documents...');
+        const documents = await apiHelpers.get('documents/', { property_id: propertyId });
+        console.log('Documents response:', documents);
+
+        if (documents && Array.isArray(documents)) {
+          setDocuments(documents);
+        } else {
+          console.error('Unexpected documents data format:', documents);
+          setDocuments([]);
+        }
+      } catch (err) {
+        console.error('Error fetching documents:', err);
+        setDocuments([]);
+      }
+
+      // Fetch projects
+      try {
+        console.log('Fetching projects...');
+        const projects = await apiHelpers.get('projects/', { property_id: propertyId });
+        console.log('Projects response:', projects);
+
+        if (projects && Array.isArray(projects)) {
+          setProjects(projects);
+        } else {
+          console.error('Unexpected projects data format:', projects);
+          setProjects([]);
+        }
+      } catch (err) {
+        console.error('Error fetching projects:', err);
+        setProjects([]);
+      }
+
+      // Fetch monthly expenses
+      fetchMonthlyExpenses(propertyId);
+
+      setLoadingDashboardData(false);
+    } catch (err) {
+      console.error('Error in fetchDashboardData:', err);
+      setMaintenanceItems([]);
+      setAppliances([]);
+      setDocuments([]);
+      setProjects([]);
+      setMonthlyExpenseTotal(0);
+      setBudgetStatus({
+        underBudget: false,
+        percentage: 0
+      });
+    }
+  }, []);
+
+  // Fetch all properties and set the current one
+  const fetchProperties = useCallback(async () => {
+    try {
+      setLoading(true);
+      const fetchedProperties = await apiHelpers.get('properties/');
+
+      setProperties(fetchedProperties || []);
+
+      if (fetchedProperties && fetchedProperties.length > 0) {
+        // Get current property from localStorage or use the first one
+        const savedPropertyId = localStorage.getItem('currentPropertyId');
+        let propertyToUse;
+
+        if (savedPropertyId) {
+          propertyToUse = fetchedProperties.find(p => p.id?.toString() === savedPropertyId);
+        }
+
+        // If no saved property or saved property not found, use first property
+        if (!propertyToUse) {
+          propertyToUse = fetchedProperties[0];
+        }
+
+        setCurrentProperty(propertyToUse);
+
+        // Fetch photos and dashboard data for the selected property
+        if (propertyToUse) {
+          fetchHomePhotos(propertyToUse.id);
+          fetchDashboardData(propertyToUse.id);
+        }
+      }
+
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching properties:', err);
+      setError('Failed to load property information. Please try again later.');
+      setLoading(false);
+    }
+  }, [fetchHomePhotos, fetchDashboardData]);
+
   useEffect(() => {
     // Check if there's a message from another page
     if (location.state && location.state.message) {
@@ -60,7 +245,7 @@ const HomeOwnerDashboard = () => {
     }
     
     // Display debug information
-    console.log('HomieHQ- Initial load');
+    console.log('PropertyPal- Initial load');
     console.log('User:', userString);
     console.log('Token available:', !!token);
     
@@ -86,7 +271,7 @@ const HomeOwnerDashboard = () => {
     return () => {
       window.removeEventListener('error', handleImgError, true);
     };
-  }, [navigate, location.state]);
+  }, [navigate, location.state, fetchProperties]);
 
   const fetchAppliancesData = async (propertyId) => {
     console.log(`Fetching appliances for property ID: ${propertyId}`);
@@ -113,45 +298,6 @@ const HomeOwnerDashboard = () => {
     }
   }, [currentProperty]);
 
-  // Fetch all properties and set the current one
-  const fetchProperties = async () => {
-    try {
-      setLoading(true);
-      const fetchedProperties = await apiHelpers.get('properties/');
-      
-      setProperties(fetchedProperties || []);
-      
-      if (fetchedProperties && fetchedProperties.length > 0) {
-        // Get current property from localStorage or use the first one
-        const savedPropertyId = localStorage.getItem('currentPropertyId');
-        let propertyToUse;
-        
-        if (savedPropertyId) {
-          propertyToUse = fetchedProperties.find(p => p.id?.toString() === savedPropertyId);
-        }
-        
-        // If no saved property or saved property not found, use first property
-        if (!propertyToUse) {
-          propertyToUse = fetchedProperties[0];
-        }
-        
-        setCurrentProperty(propertyToUse);
-        
-        // Fetch photos and dashboard data for the selected property
-        if (propertyToUse) {
-          fetchHomePhotos(propertyToUse.id);
-          fetchDashboardData(propertyToUse.id);
-        }
-      }
-      
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching properties:', err);
-      setError('Failed to load property information. Please try again later.');
-      setLoading(false);
-    }
-  };
-
   // Handle property selection from dropdown
   const handleSelectProperty = (property) => {
     setCurrentProperty(property);
@@ -162,125 +308,6 @@ const HomeOwnerDashboard = () => {
     // Fetch photos and data for the selected property
     fetchHomePhotos(property.id);
     fetchDashboardData(property.id);
-  };
-
-  // Fetch dashboard data from all services
-  const fetchDashboardData = async (propertyId) => {
-    setLoadingDashboardData(true);
-    console.log(`Fetching dashboard data for property ID: ${propertyId}`);
-    
-    try {
-      // Fetch maintenance items (limited to pending items)
-      try {
-        console.log('Fetching maintenance items...');
-        const maintenanceItems = await apiHelpers.get('maintenance/', { 
-          status: 'pending', 
-          property_id: propertyId 
-        });
-        
-        console.log('Maintenance response:', maintenanceItems);
-        
-        if (maintenanceItems && Array.isArray(maintenanceItems)) {
-          setMaintenanceItems(maintenanceItems);
-        } else {
-          // API returned unexpected format
-          console.error('Unexpected maintenance data format:', maintenanceItems);
-          setMaintenanceItems([]);
-        }
-      } catch (err) {
-        console.error('Error fetching maintenance items:', err);
-        setMaintenanceItems([]);
-      }
-      
-      // Fetch appliances
-      try {
-        console.log('Fetching appliances...');
-        const appliances = await apiHelpers.get('appliances/', { 
-          property_id: propertyId 
-        });
-        
-        console.log('Appliances response:', appliances);
-        
-        if (appliances && Array.isArray(appliances)) {
-          setAppliances(appliances);
-        } else {
-          // API returned unexpected format
-          console.error('Unexpected appliances data format:', appliances);
-          setAppliances([]);
-        }
-      } catch (err) {
-        console.error('Error fetching appliances:', err);
-        setAppliances([]);
-      }
-      
-      // Fetch documents
-      try {
-        console.log('Fetching documents...');
-        const documents = await apiHelpers.get('documents/', { 
-          property_id: propertyId 
-        });
-        
-        console.log('Documents response:', documents);
-        
-        if (documents && Array.isArray(documents)) {
-          setDocuments(documents.slice(0, 4));
-        } else {
-          // API returned unexpected format
-          console.error('Unexpected documents data format:', documents);
-          setDocuments([]);
-        }
-      } catch (err) {
-        console.error('Error fetching documents:', err);
-        setDocuments([]);
-      }
-      
-      // Fetch projects
-      try {
-        console.log('Fetching projects...');
-        const projects = await apiHelpers.get('projects/', { 
-          property_id: propertyId 
-        });
-        
-        console.log('Projects response:', projects);
-        
-        if (projects && Array.isArray(projects)) {
-          setProjects(projects);
-        } else {
-          // API returned unexpected format
-          console.error('Unexpected projects data format:', projects);
-          setProjects([]);
-        }
-      } catch (err) {
-        console.error('Error fetching projects:', err);
-        setProjects([]);
-      }
-      
-      // Fetch monthly expense data
-      try {
-        await fetchMonthlyExpenses(propertyId);
-      } catch (err) {
-        console.error('Error fetching monthly expenses:', err);
-        setMonthlyExpenseTotal(0);
-        setBudgetStatus({
-          underBudget: false,
-          percentage: 0
-        });
-      }
-      
-      setLoadingDashboardData(false);
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-      setLoadingDashboardData(false);
-      setMaintenanceItems([]);
-      setAppliances([]);
-      setProjects([]);
-      setDocuments([]);
-      setMonthlyExpenseTotal(0);
-      setBudgetStatus({
-        underBudget: false,
-        percentage: 0
-      });
-    }
   };
 
   // Fetch monthly expenses
@@ -339,12 +366,6 @@ const HomeOwnerDashboard = () => {
     }
   };
 
-  // Toggle sidebar visibility
-  const toggleSidebarVisibility = () => {
-    const newValue = !hideSidebar;
-    setHideSidebar(newValue);
-    localStorage.setItem('hideSidebar', newValue.toString());
-  };
 
   // PHOTO HANDLING FUNCTIONS
   
@@ -511,72 +532,6 @@ const HomeOwnerDashboard = () => {
     }
   };
 
-  // Fetch home photos
-  const fetchHomePhotos = async (propertyId) => {
-    try {
-      if (!propertyId) return;
-      
-      console.log(`Fetching photos for property ID: ${propertyId}`);
-      
-      const photos = await apiHelpers.get(`property_photos/${propertyId}`);
-      
-      console.log('Photo API response:', photos);
-      
-      // Check if we got any photos back
-      if (!photos || photos.length === 0) {
-        console.log('No photos returned from API');
-        setHomePhotos([]);
-        return;
-      }
-      
-      // For debugging, let's log the URLs from the server
-      console.log('Original photo URLs from server:', photos.map(p => p.url));
-      
-      const photosWithFullUrl = photos.map(photo => {
-        // Check if URL already has the full path
-        let fullUrl = photo.url;
-        
-        if (!fullUrl) {
-          console.log('Warning: Photo with undefined URL:', photo);
-          return { ...photo, url: '' };
-        }
-        
-        // Handle relative paths
-        if (!fullUrl.startsWith('http') && !fullUrl.startsWith('/')) {
-          fullUrl = '/' + fullUrl;
-        }
-        
-        // Add base URL for absolute paths
-        if (!fullUrl.startsWith('http')) {
-          fullUrl = API_BASE_URL + fullUrl;
-        }
-        
-        console.log(`Original URL: ${photo.url}, Full URL: ${fullUrl}`);
-        
-        return {
-          ...photo,
-          url: fullUrl
-        };
-      });
-      
-      console.log('Photos with full URLs:', photosWithFullUrl);
-      setHomePhotos(photosWithFullUrl);
-    } catch (err) {
-      console.error('Error fetching home photos:', err);
-      console.error('Error details:', err.response ? err.response.data : err.message);
-      setHomePhotos([]);
-    }
-  };
-
-  // Format file size for display
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-  
   // Format currency with commas and dollar sign
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined) return '$0';
@@ -760,7 +715,7 @@ const HomeOwnerDashboard = () => {
               </div>
               <div>
                 <button 
-                  className={`text-teal-500 text-sm hover:text-teal-400 mr-4 ${homePhotos.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`text-sky-400 text-sm hover:text-sky-300 mr-4 ${homePhotos.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                   onClick={() => setShowGallery(true)}
                   disabled={homePhotos.length === 0}
                 >
@@ -810,7 +765,7 @@ const HomeOwnerDashboard = () => {
                           <img 
                             src={photo.url} 
                             alt={photo.title || "Home"} 
-                            className={`w-full h-48 object-cover rounded-md ${photo.is_primary ? 'ring-2 ring-teal-500' : ''}`}
+                            className={`w-full h-48 object-cover rounded-md ${photo.is_primary ? 'ring-2 ring-sky-400' : ''}`}
                             onError={(e) => {
                               e.target.onerror = null;
                               e.target.src = "";
@@ -821,7 +776,7 @@ const HomeOwnerDashboard = () => {
                           <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center space-x-2">
                             {!photo.is_primary && (
                               <button 
-                                className="text-white p-2 bg-teal-600 rounded-full"
+                                className="text-white p-2 bg-sky-500 rounded-full"
                                 onClick={() => setAsPrimary(photo.id)}
                                 title="Set as primary photo"
                               >
@@ -841,7 +796,7 @@ const HomeOwnerDashboard = () => {
                             </button>
                           </div>
                           {photo.is_primary && (
-                            <div className="absolute top-2 right-2 bg-teal-500 text-white text-xs px-2 py-1 rounded-full">
+                            <div className="absolute top-2 right-2 bg-sky-400 text-white text-xs px-2 py-1 rounded-full">
                               Primary
                             </div>
                           )}
@@ -907,7 +862,7 @@ const HomeOwnerDashboard = () => {
                     {budgetStatus.percentage}% over budget
                   </span>
                 )}
-                <Link to="/expenses" className="ml-auto text-teal-500 hover:text-teal-400">
+                <Link to="/expenses" className="ml-auto text-sky-400 hover:text-sky-300">
                   View details
                 </Link>
               </div>
@@ -950,14 +905,14 @@ const HomeOwnerDashboard = () => {
                         </span>
                       </div>
                     ))}
-                    <Link to="/maintenance" className="block mt-3 text-teal-500 hover:text-teal-400">
+                    <Link to="/maintenance" className="block mt-3 text-sky-400 hover:text-sky-300">
                       Schedule now
                     </Link>
                   </div>
                 ) : (
                   <div>
                     <p className="text-gray-400">No maintenance items due</p>
-                    <Link to="/maintenance" className="block mt-3 text-teal-500 hover:text-teal-400">
+                    <Link to="/maintenance" className="block mt-3 text-sky-400 hover:text-sky-300">
                       Add maintenance tasks
                     </Link>
                   </div>
@@ -1008,7 +963,7 @@ const HomeOwnerDashboard = () => {
                     
                     // Determine status styles
                     let statusStyles = {
-                      bg: 'bg-teal-500',
+                      bg: 'bg-sky-400',
                       badge: 'bg-gray-700 text-gray-300'
                     };
                     
@@ -1021,8 +976,8 @@ const HomeOwnerDashboard = () => {
                         break;
                       case 'in-progress':
                         statusStyles = {
-                          bg: 'bg-teal-500',
-                          badge: 'bg-teal-900 text-teal-300 bg-opacity-30'
+                          bg: 'bg-sky-400',
+                          badge: 'bg-sky-900 text-sky-200 bg-opacity-30'
                         };
                         break;
                       case 'on-hold':
@@ -1036,6 +991,9 @@ const HomeOwnerDashboard = () => {
                           bg: 'bg-gray-500',
                           badge: 'bg-gray-700 text-gray-300'
                         };
+                        break;
+                      default:
+                        // Use default styles defined above
                         break;
                     }
                     
@@ -1064,7 +1022,7 @@ const HomeOwnerDashboard = () => {
               ) : (
                 <div className="text-center py-6">
                   <p className="text-gray-400 mb-4">No active projects</p>
-                  <Link to="/projects" className="text-teal-500 hover:text-teal-400">
+                  <Link to="/projects" className="text-sky-400 hover:text-sky-300">
                     Create your first project
                   </Link>
                 </div>
@@ -1157,7 +1115,7 @@ const HomeOwnerDashboard = () => {
                   
                   {appliances.length > 2 && (
                     <div className="pt-3 text-center">
-                      <Link to="/appliances" className="text-teal-500 hover:text-teal-400 text-sm">
+                      <Link to="/appliances" className="text-sky-400 hover:text-sky-300 text-sm">
                         View all {appliances.length} appliances
                       </Link>
                     </div>
@@ -1166,7 +1124,7 @@ const HomeOwnerDashboard = () => {
               ) : (
                 <div className="text-center py-6">
                   <p className="text-gray-400 mb-4">No appliances added yet</p>
-                  <Link to="/appliances" className="text-teal-500 hover:text-teal-400">
+                  <Link to="/appliances" className="text-sky-400 hover:text-sky-300">
                     Add your first appliance
                   </Link>
                 </div>
@@ -1221,7 +1179,7 @@ const HomeOwnerDashboard = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                   </svg>
                   <p className="text-gray-400 mb-2">No documents added yet</p>
-                  <Link to="/documents" className="text-teal-500 hover:text-teal-400">Upload your first document</Link>
+                  <Link to="/documents" className="text-sky-400 hover:text-sky-300">Upload your first document</Link>
                 </div>
               )}
             </div>
@@ -1233,7 +1191,7 @@ const HomeOwnerDashboard = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
               </svg>
               <h3 className="text-lg font-medium mb-2">No Home Found</h3>
-              <p className="text-gray-400 mb-6">Add your home to get started with HomieHQ.</p>
+              <p className="text-gray-400 mb-6">Add your home to get started with PropertyPal.</p>
               <Link to="/add-property" className="btn-primary px-6 py-2 rounded-md inline-flex items-center">
                 <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>

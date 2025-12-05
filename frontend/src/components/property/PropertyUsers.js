@@ -191,7 +191,7 @@ const PropertyUsers = ({ currentProperty, setCurrentProperty }) => {
       case 'owner':
         return 'bg-blue-900 bg-opacity-30 text-blue-300';
       case 'manager':
-        return 'bg-teal-900 bg-opacity-30 text-teal-300';
+        return 'bg-sky-900 bg-opacity-30 text-sky-200';
       case 'tenant':
         return 'bg-purple-900 bg-opacity-30 text-purple-300';
       default:
@@ -293,7 +293,7 @@ const PropertyUsers = ({ currentProperty, setCurrentProperty }) => {
           <div className="text-center py-6">
             <p className="text-gray-400 mb-4">No users associated with this property yet</p>
             <button 
-              className="text-teal-500 hover:text-teal-400 text-sm"
+              className="text-sky-400 hover:text-sky-300 text-sm"
               onClick={() => setShowInviteForm(true)}
             >
               Invite your first user
@@ -474,7 +474,7 @@ const PropertyUsers = ({ currentProperty, setCurrentProperty }) => {
         </p>
         <ul className="list-disc pl-5 text-gray-400 space-y-1">
           <li><span className="text-blue-300 font-medium">Owners</span> have full control over the property, including user management.</li>
-          <li><span className="text-teal-300 font-medium">Managers</span> can edit property details and manage tenants, but cannot add/remove owners.</li>
+          <li><span className="text-sky-200 font-medium">Managers</span> can edit property details and manage tenants, but cannot add/remove owners.</li>
           <li><span className="text-purple-300 font-medium">Tenants</span> have limited access to property details and can submit maintenance requests.</li>
         </ul>
       </div>

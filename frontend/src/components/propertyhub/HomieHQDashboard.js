@@ -5,7 +5,7 @@ import Navigation from '../layout/Navigation';
 import PropertySelector from '../layout/PropertySelector';
 import DashboardMaintenanceChecklist from './DashboardMaintenanceChecklist';
 
-const HomieHQDashboard = () => {
+const PropertyPalDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState(null);
@@ -731,7 +731,7 @@ const HomieHQDashboard = () => {
               </div>
               <div>
                 <button 
-                  className={`text-teal-500 text-sm hover:text-teal-400 mr-4 ${homePhotos.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`text-sky-400 text-sm hover:text-sky-300 mr-4 ${homePhotos.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                   onClick={() => setShowGallery(true)}
                   disabled={homePhotos.length === 0}
                 >
@@ -781,7 +781,7 @@ const HomieHQDashboard = () => {
                           <img 
                             src={photo.url} 
                             alt={photo.title || "Home"} 
-                            className={`w-full h-48 object-cover rounded-md ${photo.is_primary ? 'ring-2 ring-teal-500' : ''}`}
+                            className={`w-full h-48 object-cover rounded-md ${photo.is_primary ? 'ring-2 ring-sky-400' : ''}`}
                             onError={(e) => {
                               e.target.onerror = null;
                               e.target.src = "";
@@ -792,7 +792,7 @@ const HomieHQDashboard = () => {
                           <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center space-x-2">
                             {!photo.is_primary && (
                               <button 
-                                className="text-white p-2 bg-teal-600 rounded-full"
+                                className="text-white p-2 bg-sky-500 rounded-full"
                                 onClick={() => setAsPrimary(photo.id)}
                                 title="Set as primary photo"
                               >
@@ -812,7 +812,7 @@ const HomieHQDashboard = () => {
                             </button>
                           </div>
                           {photo.is_primary && (
-                            <div className="absolute top-2 right-2 bg-teal-500 text-white text-xs px-2 py-1 rounded-full">
+                            <div className="absolute top-2 right-2 bg-sky-400 text-white text-xs px-2 py-1 rounded-full">
                               Primary
                             </div>
                           )}
@@ -875,7 +875,7 @@ const HomieHQDashboard = () => {
                     {budgetStatus.percentage}% over budget
                   </span>
                 )}
-                <Link to="/expenses" className="ml-auto text-teal-500 hover:text-teal-400">
+                <Link to="/expenses" className="ml-auto text-sky-400 hover:text-sky-300">
                   View details
                 </Link>
               </div>
@@ -918,14 +918,14 @@ const HomieHQDashboard = () => {
                         </span>
                       </div>
                     ))}
-                    <Link to="/maintenance" className="block mt-3 text-teal-500 hover:text-teal-400">
+                    <Link to="/maintenance" className="block mt-3 text-sky-400 hover:text-sky-300">
                       Schedule now
                     </Link>
                   </div>
                 ) : (
                   <div>
                     <p className="text-gray-400">No maintenance items due</p>
-                    <Link to="/maintenance" className="block mt-3 text-teal-500 hover:text-teal-400">
+                    <Link to="/maintenance" className="block mt-3 text-sky-400 hover:text-sky-300">
                       Add maintenance tasks
                     </Link>
                   </div>
@@ -975,7 +975,7 @@ const HomieHQDashboard = () => {
                     
                     // Determine status styles
                     let statusStyles = {
-                      bg: 'bg-teal-500',
+                      bg: 'bg-sky-400',
                       badge: 'bg-gray-700 text-gray-300'
                     };
                     
@@ -988,8 +988,8 @@ const HomieHQDashboard = () => {
                         break;
                       case 'in-progress':
                         statusStyles = {
-                          bg: 'bg-teal-500',
-                          badge: 'bg-teal-900 text-teal-300 bg-opacity-30'
+                          bg: 'bg-sky-400',
+                          badge: 'bg-sky-900 text-sky-200 bg-opacity-30'
                         };
                         break;
                       case 'on-hold':
@@ -1031,7 +1031,7 @@ const HomieHQDashboard = () => {
               ) : (
                 <div className="text-center py-6">
                   <p className="text-gray-400 mb-4">No active projects</p>
-                  <Link to="/projects" className="text-teal-500 hover:text-teal-400">
+                  <Link to="/projects" className="text-sky-400 hover:text-sky-300">
                     Create your first project
                   </Link>
                 </div>
@@ -1125,7 +1125,7 @@ const HomieHQDashboard = () => {
                   
                   {appliances.length > 2 && (
                     <div className="pt-3 text-center">
-                      <Link to="/appliances" className="text-teal-500 hover:text-teal-400 text-sm">
+                      <Link to="/appliances" className="text-sky-400 hover:text-sky-300 text-sm">
                         View all {appliances.length} appliances
                       </Link>
                     </div>
@@ -1134,7 +1134,7 @@ const HomieHQDashboard = () => {
               ) : (
                 <div className="text-center py-6">
                   <p className="text-gray-400 mb-4">No appliances added yet</p>
-                  <Link to="/appliances" className="text-teal-500 hover:text-teal-400">
+                  <Link to="/appliances" className="text-sky-400 hover:text-sky-300">
                     Add your first appliance
                   </Link>
                 </div>
@@ -1189,7 +1189,7 @@ const HomieHQDashboard = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>
                 <p className="text-gray-400 mb-2">No documents added yet</p>
-                <Link to="/documents" className="text-teal-500 hover:text-teal-400">Upload your first document</Link>
+                <Link to="/documents" className="text-sky-400 hover:text-sky-300">Upload your first document</Link>
               </div>
             )}
           </div>
@@ -1201,7 +1201,7 @@ const HomieHQDashboard = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
               </svg>
               <h3 className="text-lg font-medium mb-2">No Home Found</h3>
-              <p className="text-gray-400 mb-6">Add your home to get started with HomieHQ.</p>
+              <p className="text-gray-400 mb-6">Add your home to get started with PropertyPal.</p>
               <Link to="/add-property" className="btn-primary px-6 py-2 rounded-md inline-flex items-center">
                 <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -1216,4 +1216,4 @@ const HomieHQDashboard = () => {
   );
 };
 
-export default HomieHQDashboard;
+export default PropertyPalDashboard;

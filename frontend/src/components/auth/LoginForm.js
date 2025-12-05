@@ -43,21 +43,15 @@ const LoginForm = () => {
       if (response && response.access_token) {
         // Store the tokens in localStorage
         localStorage.setItem('accessToken', response.access_token);
-        
+
         if (response.refresh_token) {
           localStorage.setItem('refreshToken', response.refresh_token);
         }
-        
+
         if (response.user) {
           localStorage.setItem('user', JSON.stringify(response.user));
-          
-          // Check if email is verified (if your API includes this field)
-          if (response.user.email_verified === false) {
-            setError('Please verify your email address before logging in.');
-            return;
-          }
         }
-        
+
         // Redirect to landing route which will determine where to go next
         navigate('/landing');
       } else {
@@ -107,8 +101,7 @@ const LoginForm = () => {
       <div className="card w-full max-w-md p-8">
         <div className="flex justify-center mb-6">
           <div className="text-3xl font-bold">
-            <span className="homie-text">Homie</span>
-            <span className="accent-text">HQ</span>
+            <span className="property-text">Property</span>Pal
           </div>
         </div>
         
@@ -121,7 +114,7 @@ const LoginForm = () => {
               <div className="mt-2">
                 <button
                   type="button"
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1 rounded-md text-sm"
+                  className="bg-sky-400 hover:bg-sky-500 text-white px-3 py-1 rounded-md text-sm"
                   onClick={handleResendVerification}
                 >
                   Resend verification email

@@ -24,7 +24,7 @@ import ForgotPasswordForm from './components/auth/ForgotPasswordForm';
 import ResetPasswordForm from './components/auth/ResetPasswordForm';
 import VerifyEmail from './components/auth/VerifyEmail';
 import ResendVerificationEmail from './components/auth/ResendVerificationEmail';
-import './components/homeowner/HomieHQ.css';
+import './components/homeowner/PropertyPal.css';
 
 // Import apiHelpers instead of using direct axios
 import { apiHelpers } from './services/api';

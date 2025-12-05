@@ -367,7 +367,7 @@ const Tenants = () => {
                     </td>
                     <td className="py-4 px-4 text-right">
                       <button 
-                        className="text-teal-500 hover:text-teal-400 px-2"
+                        className="text-sky-400 hover:text-sky-300 px-2"
                         onClick={() => viewTenantDetails(tenant)}
                       >
                         <svg className="h-5 w-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -518,7 +518,7 @@ const Tenants = () => {
                       Edit Tenant
                     </button>
                     <button 
-                      className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md"
+                      className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-md"
                       onClick={() => {
                         setShowDetailModal(false);
                         navigate(`/tenants/${selectedTenant.id}/documents`);

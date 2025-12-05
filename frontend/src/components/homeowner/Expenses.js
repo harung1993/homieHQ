@@ -466,7 +466,7 @@ const Expenses = () => {
               <span className="text-gray-400">
                 Current Month
               </span>
-              <button className="ml-auto text-teal-500 hover:text-teal-400">
+              <button className="ml-auto text-sky-400 hover:text-sky-300">
                 View Budget
               </button>
             </div>
@@ -506,7 +506,7 @@ const Expenses = () => {
                     .sort((a, b) => b[1] - a[1])[0][1])
                 ) : '$0.00'}
               </span>
-              <button className="ml-auto text-teal-500 hover:text-teal-400">
+              <button className="ml-auto text-sky-400 hover:text-sky-300">
                 View Report
               </button>
             </div>
@@ -534,7 +534,7 @@ const Expenses = () => {
                  dateRange === 'year' ? 'This Year' : 'All Time'}
               </span>
               <button 
-                className="ml-auto text-teal-500 hover:text-teal-400"
+                className="ml-auto text-sky-400 hover:text-sky-300"
                 onClick={() => setShowAddForm(true)}
               >
                 Add Expense
@@ -710,7 +710,7 @@ const Expenses = () => {
                       type="checkbox" 
                       name="recurring" 
                       id="recurring" 
-                      className="form-checkbox h-5 w-5 text-teal-500 rounded bg-gray-700 border-gray-600" 
+                      className="form-checkbox h-5 w-5 text-sky-400 rounded bg-gray-700 border-gray-600" 
                       checked={newExpense.recurring}
                       onChange={handleInputChange}
                     />
@@ -844,7 +844,7 @@ const Expenses = () => {
                       type="checkbox" 
                       name="recurring" 
                       id="edit-recurring" 
-                      className="form-checkbox h-5 w-5 text-teal-500 rounded bg-gray-700 border-gray-600" 
+                      className="form-checkbox h-5 w-5 text-sky-400 rounded bg-gray-700 border-gray-600" 
                       checked={newExpense.recurring}
                       onChange={handleInputChange}
                     />

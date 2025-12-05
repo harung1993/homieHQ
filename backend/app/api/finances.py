@@ -112,24 +112,24 @@ def create_expense():
     
     # Validate amount is positive
     try:
-        amount = float(data['amount'])
-        if amount <= 0:
+        amount_dollars = float(data['amount'])
+        if amount_dollars <= 0:
             return jsonify({"error": "Amount must be positive"}), 400
     except (ValueError, TypeError):
         return jsonify({"error": "Amount must be a valid number"}), 400
-    
+
     # Parse date
     try:
         expense_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
     except ValueError:
         return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
-    
+
     # Create new expense
     new_expense = Expense(
         user_id=current_user_id,
         property_id=property_id,
         title=data['title'],
-        amount=amount,
+        amount=int(amount_dollars * 100),  # Convert dollars to cents
         category=data['category'],
         date=expense_date,
         description=data.get('description', ''),
@@ -199,10 +199,10 @@ def update_expense(expense_id):
     
     if 'amount' in data:
         try:
-            amount = float(data['amount'])
-            if amount <= 0:
+            amount_dollars = float(data['amount'])
+            if amount_dollars <= 0:
                 return jsonify({"error": "Amount must be positive"}), 400
-            expense.amount = amount
+            expense.amount = int(amount_dollars * 100)  # Convert dollars to cents
         except (ValueError, TypeError):
             return jsonify({"error": "Amount must be a valid number"}), 400
     
@@ -392,12 +392,12 @@ def create_budget():
     
     # Validate amount is positive
     try:
-        amount = float(data['amount'])
-        if amount <= 0:
+        amount_dollars = float(data['amount'])
+        if amount_dollars <= 0:
             return jsonify({"error": "Amount must be positive"}), 400
     except (ValueError, TypeError):
         return jsonify({"error": "Amount must be a valid number"}), 400
-    
+
     # Validate month
     try:
         month = int(data['month'])
@@ -405,7 +405,7 @@ def create_budget():
             return jsonify({"error": "Month must be between 1 and 12"}), 400
     except (ValueError, TypeError):
         return jsonify({"error": "Month must be a valid integer"}), 400
-    
+
     # Validate year
     try:
         year = int(data['year'])
@@ -413,7 +413,7 @@ def create_budget():
             return jsonify({"error": "Year must be between 2000 and 2100"}), 400
     except (ValueError, TypeError):
         return jsonify({"error": "Year must be a valid integer"}), 400
-    
+
     # Check for existing budget with same category/month/year/property
     existing_budget = Budget.query.filter_by(
         category=data['category'],
@@ -421,16 +421,16 @@ def create_budget():
         year=year,
         property_id=data['property_id']
     ).first()
-    
+
     if existing_budget:
         return jsonify({"error": "A budget already exists for this category, month, year, and property"}), 409
-    
+
     # Create new budget
     new_budget = Budget(
         user_id=current_user_id,
         property_id=data['property_id'],
         category=data['category'],
-        amount=amount,
+        amount=int(amount_dollars * 100),  # Convert dollars to cents
         month=month,
         year=year
     )
@@ -503,10 +503,10 @@ def update_budget(budget_id):
     
     if 'amount' in data:
         try:
-            amount = float(data['amount'])
-            if amount <= 0:
+            amount_dollars = float(data['amount'])
+            if amount_dollars <= 0:
                 return jsonify({"error": "Amount must be positive"}), 400
-            budget.amount = amount
+            budget.amount = int(amount_dollars * 100)  # Convert dollars to cents
         except (ValueError, TypeError):
             return jsonify({"error": "Amount must be a valid number"}), 400
     

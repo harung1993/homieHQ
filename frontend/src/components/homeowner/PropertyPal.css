@@ -1,9 +1,9 @@
-/* HomieHQ specific styles */
+/* PropertyPal specific styles */
 :root {
-  --primary: #2C5282;
-  --secondary: #38B2AC;
+  --primary: #38bdf8;
+  --secondary: #3b82f6;
   --accent: #ED8936;
-  --homie-color: #38B2AC; /* Teal color for "Home" */
+  --property-color: #38bdf8; /* Sky blue color for "Property" */
   --background: #1F2937;
   --card-bg: #2D3748;
   --text: #E5E7EB;
@@ -42,7 +42,7 @@ body::before {
 }
 
 .btn-primary:hover {
-  background-color: #2D4A77;
+  background-color: #0ea5e9;
 }
 
 .btn-secondary {
@@ -52,7 +52,7 @@ body::before {
 }
 
 .btn-secondary:hover {
-  background-color: #2C9A9A;
+  background-color: #2563eb;
 }
 
 .btn-accent {
@@ -69,8 +69,8 @@ body::before {
   color: var(--accent);
 }
 
-.homie-text {
-  color: var(--homie-color);
+.property-text {
+  color: var(--property-color);
 }
 
 .accent-border {
@@ -95,7 +95,7 @@ body::before {
 .form-input:focus {
   outline: none;
   border-color: var(--secondary);
-  box-shadow: 0 0 0 3px rgba(56, 178, 172, 0.2);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
 }
 
 .form-label {
@@ -154,7 +154,7 @@ body::before {
 }
 
 .sidebar-link:hover, .sidebar-link.active {
-  background-color: rgba(56, 178, 172, 0.1);
+  background-color: rgba(56, 189, 248, 0.1);
   color: var(--text);
   border-left: 3px solid var(--secondary);
   padding-left: calc(1.5rem - 3px); /* Adjust padding to keep content aligned */

@@ -93,8 +93,7 @@ const ResetPasswordForm = () => {
       <div className="card w-full max-w-md p-8">
         <div className="flex justify-center mb-6">
           <div className="text-3xl font-bold">
-            <span className="homie-text">Homie</span>
-            <span className="accent-text">HQ</span>
+            <span className="property-text">Property</span>Pal
           </div>
         </div>
         
