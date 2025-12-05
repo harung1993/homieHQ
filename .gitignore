@@ -26,9 +26,13 @@ venv/
 env/
 ENV/
 instance/
+propertypal_env/
 .env
-.env.*
+.env.local
 !.env.example
+!.env.dev
+!.env.demo
+!.env.prod
 .flaskenv
 *.db
 app.db
@@ -60,16 +64,13 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
-# VS Code
+# IDEs
 .vscode/
 *.code-workspace
-
-# PyCharm
 .idea/
 *.iml
 *.iws
 *.ipr
-*.iws
 .idea_modules/
 
 # User uploads
@@ -82,7 +83,7 @@ uploads/
 logs/
 *.log
 
-# DB migration files
+# DB migration files (keep structure, ignore versions)
 migrations/versions/*
 !migrations/versions/.gitkeep
 
@@ -95,108 +96,11 @@ migrations/versions/*
 ehthumbs.db
 Thumbs.db
 
-# Docker files to exclude
-docker-compose.yml
-docker-compose.*.yml
-!docker-compose.example
+# Docker volumes (don't commit data volumes)
 postgres_data/
+app_uploads/
 
-# Nginx config at root level
-/nginx.conf
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Flask environment
-venv/
-env/
-ENV/
-instance/
-.env
-.env.*
-!.env.example
-.flaskenv
-*.db
-app.db
-dev.db
-*.sqlite3
-
-# Node/React
-node_modules/
-/frontend/build
-/frontend/.env
-/frontend/.env.local
-/frontend/.env.development.local
-/frontend/.env.test.local
-/frontend/.env.production.local
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# VS Code
-.vscode/
-*.code-workspace
-
-# PyCharm
-.idea/
-*.iml
-*.iws
-*.ipr
-*.iws
-.idea_modules/
-
-# User uploads
-uploads/
-!uploads/.gitkeep
-
-# Logs
-logs/
-*.log
-
-# DB migration files
-migrations/versions/*
-!migrations/versions/.gitkeep
-
-# OS specific files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Docker volumes
-postgres_data/
+# SSL certificates
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
