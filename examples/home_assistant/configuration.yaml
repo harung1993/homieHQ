@@ -1,0 +1,107 @@
+# PropertyPal Home Assistant Integration Configuration
+# Add this to your Home Assistant configuration.yaml
+
+# Replace YOUR_API_KEY with your actual PropertyPal API key
+# Get your API key from PropertyPal Settings → API Keys
+
+# ============================================================================
+# REST Sensor for Maintenance Tasks
+# ============================================================================
+rest:
+  - resource: "http://localhost:5008/api/integrations/ha/maintenance"
+    # For production, use: "https://propertypal.yourdomain.com/api/integrations/ha/maintenance"
+    headers:
+      X-API-Key: "YOUR_API_KEY_HERE"
+    scan_interval: 300  # Check every 5 minutes
+    sensor:
+      - name: "PropertyPal Maintenance Tasks"
+        value_template: "{{ value_json.count }}"
+        json_attributes_path: "$.tasks"
+        json_attributes:
+          - id
+          - title
+          - description
+          - priority
+          - status
+          - due_date
+          - property_id
+
+# ============================================================================
+# REST Commands for Creating/Updating Tasks
+# ============================================================================
+rest_command:
+  # Create a new maintenance task
+  propertypal_create_task:
+    url: "http://localhost:5008/api/integrations/ha/maintenance"
+    method: POST
+    headers:
+      X-API-Key: "YOUR_API_KEY_HERE"
+      Content-Type: "application/json"
+    payload: >
+      {
+        "title": "{{ title }}",
+        "description": "{{ description }}",
+        "priority": "{{ priority | default('medium') }}",
+        "property_id": {{ property_id | default(1) }},
+        "due_date": "{{ due_date | default('') }}"
+      }
+
+  # Update existing task
+  propertypal_update_task:
+    url: "http://localhost:5008/api/integrations/ha/maintenance/{{ task_id }}"
+    method: PUT
+    headers:
+      X-API-Key: "YOUR_API_KEY_HERE"
+      Content-Type: "application/json"
+    payload: >
+      {
+        "status": "{{ status }}",
+        "priority": "{{ priority | default('') }}"
+      }
+
+  # Delete task
+  propertypal_delete_task:
+    url: "http://localhost:5008/api/integrations/ha/maintenance/{{ task_id }}"
+    method: DELETE
+    headers:
+      X-API-Key: "YOUR_API_KEY_HERE"
+
+# ============================================================================
+# Template Sensors for Filtering Tasks
+# ============================================================================
+template:
+  - sensor:
+      # Count high priority tasks
+      - name: "PropertyPal High Priority Tasks"
+        state: >
+          {% set tasks = state_attr('sensor.propertypal_maintenance_tasks', 'tasks') %}
+          {{ tasks | selectattr('priority', 'eq', 'high') | selectattr('status', 'ne', 'completed') | list | count if tasks else 0 }}
+        icon: mdi:alert-circle
+        attributes:
+          tasks: >
+            {% set tasks = state_attr('sensor.propertypal_maintenance_tasks', 'tasks') %}
+            {{ tasks | selectattr('priority', 'eq', 'high') | selectattr('status', 'ne', 'completed') | list if tasks else [] }}
+
+      # Count overdue tasks
+      - name: "PropertyPal Overdue Tasks"
+        state: >
+          {% set tasks = state_attr('sensor.propertypal_maintenance_tasks', 'tasks') %}
+          {% set today = now().date().isoformat() %}
+          {{ tasks | selectattr('due_date', 'lt', today) | selectattr('status', 'ne', 'completed') | list | count if tasks else 0 }}
+        icon: mdi:clock-alert
+
+      # Next due task
+      - name: "PropertyPal Next Due Task"
+        state: >
+          {% set tasks = state_attr('sensor.propertypal_maintenance_tasks', 'tasks') | default([]) %}
+          {% set pending = tasks | selectattr('status', 'ne', 'completed') | selectattr('due_date', 'defined') | sort(attribute='due_date') %}
+          {{ pending[0].title if pending | length > 0 else 'No tasks' }}
+        attributes:
+          due_date: >
+            {% set tasks = state_attr('sensor.propertypal_maintenance_tasks', 'tasks') | default([]) %}
+            {% set pending = tasks | selectattr('status', 'ne', 'completed') | selectattr('due_date', 'defined') | sort(attribute='due_date') %}
+            {{ pending[0].due_date if pending | length > 0 else none }}
+          priority: >
+            {% set tasks = state_attr('sensor.propertypal_maintenance_tasks', 'tasks') | default([]) %}
+            {% set pending = tasks | selectattr('status', 'ne', 'completed') | selectattr('due_date', 'defined') | sort(attribute='due_date') %}
+            {{ pending[0].priority if pending | length > 0 else none }}
