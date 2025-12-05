@@ -10,7 +10,14 @@ class Config:
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'jwt-secret-key-change-in-production'
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
-    
+
+    # Demo mode settings
+    DEMO_MODE = os.environ.get('DEMO_MODE', 'false').lower() == 'true'
+    DEMO_SESSION_TIMEOUT = int(os.environ.get('DEMO_SESSION_TIMEOUT', 600))  # 10 minutes default
+
+    # Email verification override (for dev/demo)
+    SKIP_EMAIL_VERIFICATION = os.environ.get('SKIP_EMAIL_VERIFICATION', 'false').lower() == 'true'
+
     # File upload settings
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
     MAX_CONTENT_LENGTH = 200 * 1024 * 1024  # 200MB max upload size
@@ -65,3 +72,14 @@ class ProductionConfig(Config):
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     USE_S3 = True
+
+
+class DemoConfig(Config):
+    """Demo configuration - like production but with demo mode enabled"""
+    DEBUG = False
+    DEMO_MODE = True
+    SKIP_EMAIL_VERIFICATION = True
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=10)  # Short session for demo
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+        'postgresql://propertypal:propertypal@db:5432/propertypal_demo'
+    USE_S3 = False  # Use local storage for demo

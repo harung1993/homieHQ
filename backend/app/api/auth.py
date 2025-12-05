@@ -104,11 +104,13 @@ def login():
     if not user or not user.verify_password(data.get('password')):
         return jsonify({"error": "Invalid credentials"}), 401
     
-    # Check if email is verified (skip in development mode)
-    # Skip email verification check in development/debug mode
-    if not current_app.config.get('DEBUG', False):
-        if not user.email_verified:
-            return jsonify({"error": "Please verify your email address before logging in", "email_verified": False}), 401
+    # Check if email is verified (skip in development/demo mode or if explicitly disabled)
+    skip_verification = current_app.config.get('DEBUG', False) or \
+                       current_app.config.get('SKIP_EMAIL_VERIFICATION', False) or \
+                       current_app.config.get('DEMO_MODE', False)
+
+    if not skip_verification and not user.email_verified:
+        return jsonify({"error": "Please verify your email address before logging in", "email_verified": False}), 401
     
     # Create access and refresh tokens - Convert to string
     access_token = create_access_token(identity=str(user.id))

@@ -4,6 +4,7 @@ import Navigation from '../layout/Navigation';
 import PropertySelector from '../layout/PropertySelector';
 import { apiHelpers, API_BASE_URL } from '../../services/api';
 import DashboardMaintenanceChecklist from './DashboardMaintenanceChecklist';
+import DemoWarningBanner from '../common/DemoWarningBanner';
 
 const HomeOwnerDashboard = () => {
   const navigate = useNavigate();
@@ -572,6 +573,9 @@ const HomeOwnerDashboard = () => {
         hideSidebar={hideSidebar}
       >
         <div className="container mx-auto px-4">
+          {/* Demo Mode Warning Banner */}
+          <DemoWarningBanner />
+
           {/* Error and message notifications */}
           {error && (
             <div className="bg-red-900 bg-opacity-30 text-red-400 p-4 rounded-md mb-6 mt-2">
