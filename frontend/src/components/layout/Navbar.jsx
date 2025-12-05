@@ -25,13 +25,13 @@ const Navbar = ({ toggleSidebar, user }) => {
           </button>
           {/* Use logo from public directory */}
           <Link to="/homie-dashboard" className="flex items-center">
-            <img 
-              src="/logo192.png" 
-              alt="HomieHQ Logo" 
-              className="h-8 w-auto mr-2" 
+            <img
+              src="/logo192.png"
+              alt="PropertyPal Logo"
+              className="h-8 w-auto mr-2"
             />
             <span className="text-xl font-bold">
-              <span className="homie-text">Homie</span><span className="accent-text">HQ</span>
+              <span className="property-text">Property</span>Pal
             </span>
           </Link>
         </div>

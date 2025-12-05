@@ -311,7 +311,7 @@ const Projects = () => {
       case 'planning':
         return 'bg-blue-900 text-blue-300 bg-opacity-30';
       case 'in-progress':
-        return 'bg-teal-900 text-teal-300 bg-opacity-30';
+        return 'bg-sky-900 text-sky-200 bg-opacity-30';
       case 'on-hold':
         return 'bg-yellow-900 text-yellow-300 bg-opacity-30';
       case 'completed':
@@ -327,7 +327,7 @@ const Projects = () => {
       case 'planning':
         return 'bg-blue-500';
       case 'in-progress':
-        return 'bg-teal-500';
+        return 'bg-sky-400';
       case 'on-hold':
         return 'bg-yellow-500';
       case 'completed':
@@ -357,7 +357,7 @@ const Projects = () => {
       actions.push(
         <button 
           key="start" 
-          className="text-teal-500 hover:text-teal-400 text-sm ml-2"
+          className="text-sky-400 hover:text-sky-300 text-sm ml-2"
           onClick={() => handleStatusChange(project.id, 'in-progress')}
         >
           Start
@@ -386,7 +386,7 @@ const Projects = () => {
       actions.push(
         <button 
           key="resume" 
-          className="text-teal-500 hover:text-teal-400 text-sm ml-2"
+          className="text-sky-400 hover:text-sky-300 text-sm ml-2"
           onClick={() => handleStatusChange(project.id, 'in-progress')}
         >
           Resume
@@ -841,7 +841,7 @@ const Projects = () => {
                 <h3 className="font-medium mb-2">Energy Efficiency Upgrades</h3>
                 <p className="text-sm text-gray-400">Install energy-efficient windows, add insulation, or update HVAC system to reduce utility bills.</p>
                 <button 
-                  className="mt-4 text-teal-500 hover:text-teal-400 text-sm"
+                  className="mt-4 text-sky-400 hover:text-sky-300 text-sm"
                   onClick={() => {
                     setNewProject({
                       ...newProject,
@@ -860,7 +860,7 @@ const Projects = () => {
                 <h3 className="font-medium mb-2">Home Office Renovation</h3>
                 <p className="text-sm text-gray-400">Transform a spare room into a functional work-from-home space with proper lighting and storage.</p>
                 <button 
-                  className="mt-4 text-teal-500 hover:text-teal-400 text-sm"
+                  className="mt-4 text-sky-400 hover:text-sky-300 text-sm"
                   onClick={() => {
                     setNewProject({
                       ...newProject,
@@ -879,7 +879,7 @@ const Projects = () => {
                 <h3 className="font-medium mb-2">Smart Home Upgrades</h3>
                 <p className="text-sm text-gray-400">Install smart thermostats, lighting, security cameras, and home automation systems.</p>
                 <button 
-                  className="mt-4 text-teal-500 hover:text-teal-400 text-sm"
+                  className="mt-4 text-sky-400 hover:text-sky-300 text-sm"
                   onClick={() => {
                     setNewProject({
                       ...newProject,

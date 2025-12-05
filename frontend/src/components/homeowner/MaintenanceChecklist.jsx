@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiHelpers } from '../../services/api';
 
 const MaintenanceChecklist = ({ propertyId, season }) => {
@@ -26,15 +26,8 @@ const MaintenanceChecklist = ({ propertyId, season }) => {
   const [currentSeason, setCurrentSeason] = useState(season || 'Spring');
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
 
-  // Fetch checklist items when component mounts or when season/property changes
-  useEffect(() => {
-    if (propertyId) {
-      fetchChecklist(currentSeason);
-    }
-  }, [propertyId, currentSeason]);
-
   // Fetch checklist from API
-  const fetchChecklist = async (seasonValue) => {
+  const fetchChecklist = useCallback(async (seasonValue) => {
     setLoading(true);
     try {
       console.log(`Fetching checklist for season: ${seasonValue}, property: ${propertyId}`);
@@ -93,8 +86,15 @@ const MaintenanceChecklist = ({ propertyId, season }) => {
         }
       });
     }
-  };
-  
+  }, [propertyId]);
+
+  // Fetch checklist items when component mounts or when season/property changes
+  useEffect(() => {
+    if (propertyId) {
+      fetchChecklist(currentSeason);
+    }
+  }, [propertyId, currentSeason, fetchChecklist]);
+
   // Toggle item completion status
   const toggleItemCompletion = async (item) => {
     try {
@@ -410,7 +410,7 @@ const MaintenanceChecklist = ({ propertyId, season }) => {
           </div>
           <div className="w-full bg-gray-700 rounded-full h-2.5">
             <div 
-              className="bg-teal-500 h-2.5 rounded-full" 
+              className="bg-sky-400 h-2.5 rounded-full" 
               style={{ width: `${checklist.stats.completionPercentage}%` }}
             ></div>
           </div>
@@ -551,7 +551,7 @@ const MaintenanceChecklist = ({ propertyId, season }) => {
                     type="checkbox" 
                     checked={item.is_completed} 
                     onChange={() => toggleItemCompletion(item)}
-                    className="form-checkbox h-5 w-5 text-teal-500 rounded bg-gray-700 border-gray-600" 
+                    className="form-checkbox h-5 w-5 text-sky-400 rounded bg-gray-700 border-gray-600" 
                   />
                 </div>
                 

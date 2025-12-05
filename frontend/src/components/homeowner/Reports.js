@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../layout/Navigation';
 import PropertySelector from '../layout/PropertySelector';
@@ -25,7 +25,6 @@ const Reports = () => {
   const [reportCategory, setReportCategory] = useState('all');
   
   // Report data
-  const [monthlyTotals, setMonthlyTotals] = useState([]);
   const [categoryTotals, setCategoryTotals] = useState({});
   const [savingsRate, setSavingsRate] = useState(0);
   const [expenseGrowthRate, setExpenseGrowthRate] = useState(0);
@@ -40,7 +39,97 @@ const Reports = () => {
     taxes: '#E53E3E', // red
     other: '#718096', // gray
   };
-  
+
+  // Fetch expenses from the API
+  const fetchExpenses = useCallback(async (propertyId) => {
+    try {
+      setLoading(true);
+
+      // Get start and end date based on report type
+      let start, end;
+      const now = new Date();
+
+      if (reportType === 'monthly') {
+        // Last 12 months
+        start = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      } else if (reportType === 'yearly') {
+        // Last 3 years
+        start = new Date(now.getFullYear() - 3, 0, 1);
+        end = new Date(now.getFullYear(), 11, 31);
+      } else {
+        // Custom date range
+        start = new Date(startDate);
+        end = new Date(endDate);
+      }
+
+      const startDateStr = start.toISOString().split('T')[0];
+      const endDateStr = end.toISOString().split('T')[0];
+
+      // Use apiHelpers for the API call with query parameters
+      const params = {
+        property_id: propertyId,
+        start_date: startDateStr,
+        end_date: endDateStr
+      };
+
+      try {
+        const response = await apiHelpers.get('finances/expenses/', params);
+
+        // If the backend isn't implemented yet, use sample data
+        const fetchedExpenses = response || getSampleExpenses();
+        setExpenses(fetchedExpenses);
+
+        // Process report data
+        processReportData(fetchedExpenses, getBudgetsForDateRange(startDateStr, endDateStr));
+      } catch (err) {
+        console.error('API Error fetching expenses:', err);
+        // For development - if endpoint not implemented, use sample data
+        const sampleData = getSampleExpenses();
+        setExpenses(sampleData);
+
+        // Process report data
+        processReportData(sampleData, getBudgetsForDateRange(startDate, endDate));
+      }
+
+      setLoading(false);
+    } catch (err) {
+      console.error('Error in fetchExpenses:', err);
+      // For development - if endpoint not implemented, use sample data
+      const sampleData = getSampleExpenses();
+      setExpenses(sampleData);
+
+      // Process report data
+      processReportData(sampleData, getBudgetsForDateRange(startDate, endDate));
+
+      setLoading(false);
+    }
+  }, [reportType, startDate, endDate]);
+
+  // Fetch budgets from the API
+  const fetchBudgets = useCallback(async (propertyId) => {
+    try {
+      // Use apiHelpers for the API call with query parameters
+      const params = { property_id: propertyId };
+
+      try {
+        const response = await apiHelpers.get('finances/budgets/', params);
+
+        // If the backend isn't implemented yet, use sample data
+        const fetchedBudgets = response || getSampleBudgets();
+        setBudgets(fetchedBudgets);
+      } catch (err) {
+        console.error('API Error fetching budgets:', err);
+        // For development - if endpoint not implemented, use sample data
+        setBudgets(getSampleBudgets());
+      }
+    } catch (err) {
+      console.error('Error in fetchBudgets:', err);
+      // For development - if endpoint not implemented, use sample data
+      setBudgets(getSampleBudgets());
+    }
+  }, []);
+
   // Get current user from local storage
   useEffect(() => {
     const userString = localStorage.getItem('user');
@@ -86,9 +175,9 @@ const Reports = () => {
         setLoading(false);
       }
     };
-    
+
     fetchProperties();
-  }, [navigate]);
+  }, [navigate, fetchExpenses, fetchBudgets]);
 
   // Handle property selection from dropdown
   const handleSelectProperty = (property) => {
@@ -102,102 +191,11 @@ const Reports = () => {
     fetchBudgets(property.id);
   };
 
-  // Fetch expenses from the API
-  const fetchExpenses = async (propertyId) => {
-    try {
-      setLoading(true);
-      
-      // Get start and end date based on report type
-      let start, end;
-      const now = new Date();
-      
-      if (reportType === 'monthly') {
-        // Last 12 months
-        start = new Date(now.getFullYear() - 1, now.getMonth(), 1);
-        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      } else if (reportType === 'yearly') {
-        // Last 3 years
-        start = new Date(now.getFullYear() - 3, 0, 1);
-        end = new Date(now.getFullYear(), 11, 31);
-      } else {
-        // Custom date range
-        start = new Date(startDate);
-        end = new Date(endDate);
-      }
-      
-      const startDateStr = start.toISOString().split('T')[0];
-      const endDateStr = end.toISOString().split('T')[0];
-      
-      // Use apiHelpers for the API call with query parameters
-      const params = {
-        property_id: propertyId,
-        start_date: startDateStr,
-        end_date: endDateStr
-      };
-      
-      try {
-        const response = await apiHelpers.get('finances/expenses/', params);
-        
-        // If the backend isn't implemented yet, use sample data
-        const fetchedExpenses = response || getSampleExpenses();
-        setExpenses(fetchedExpenses);
-        
-        // Process report data
-        processReportData(fetchedExpenses, getBudgetsForDateRange(startDateStr, endDateStr));
-      } catch (err) {
-        console.error('API Error fetching expenses:', err);
-        // For development - if endpoint not implemented, use sample data
-        const sampleData = getSampleExpenses();
-        setExpenses(sampleData);
-        
-        // Process report data
-        processReportData(sampleData, getBudgetsForDateRange(startDate, endDate));
-      }
-      
-      setLoading(false);
-    } catch (err) {
-      console.error('Error in fetchExpenses:', err);
-      // For development - if endpoint not implemented, use sample data
-      const sampleData = getSampleExpenses();
-      setExpenses(sampleData);
-      
-      // Process report data
-      processReportData(sampleData, getBudgetsForDateRange(startDate, endDate));
-      
-      setLoading(false);
-    }
-  };
-
-  // Fetch budgets from the API
-  const fetchBudgets = async (propertyId) => {
-    try {
-      // Use apiHelpers for the API call with query parameters
-      const params = { property_id: propertyId };
-      
-      try {
-        const response = await apiHelpers.get('finances/budgets/', params);
-        
-        // If the backend isn't implemented yet, use sample data
-        const fetchedBudgets = response || getSampleBudgets();
-        setBudgets(fetchedBudgets);
-      } catch (err) {
-        console.error('API Error fetching budgets:', err);
-        // For development - if endpoint not implemented, use sample data
-        setBudgets(getSampleBudgets());
-      }
-    } catch (err) {
-      console.error('Error in fetchBudgets:', err);
-      // For development - if endpoint not implemented, use sample data
-      setBudgets(getSampleBudgets());
-    }
-  };
-
   // Process report data
   const processReportData = (expensesData, budgetsData) => {
     // Calculate monthly totals
     const monthlyData = calculateMonthlyTotals(expensesData);
-    setMonthlyTotals(monthlyData);
-    
+
     // Calculate category totals
     const categoryData = calculateCategoryTotals(expensesData);
     setCategoryTotals(categoryData);

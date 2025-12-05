@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { apiHelpers } from '../../services/api';
 
@@ -29,15 +29,8 @@ const DashboardMaintenanceChecklist = ({ propertyId }) => {
     return 'Winter';
   };
   
-  // Fetch current seasonal checklist
-  useEffect(() => {
-    if (propertyId) {
-      fetchChecklist(propertyId);
-    }
-  }, [propertyId]);
-  
   // Fetch checklist from API
-  const fetchChecklist = async (propertyId) => {
+  const fetchChecklist = useCallback(async (propertyId) => {
     setLoading(true);
     console.log(`Fetching checklist for property: ${propertyId}`);
     
@@ -98,8 +91,15 @@ const DashboardMaintenanceChecklist = ({ propertyId }) => {
       setError('Failed to load checklist data');
       setLoading(false);
     }
-  };
-  
+  }, []);
+
+  // Fetch current seasonal checklist
+  useEffect(() => {
+    if (propertyId) {
+      fetchChecklist(propertyId);
+    }
+  }, [propertyId, fetchChecklist]);
+
   // Toggle item completion status
   const toggleItemCompletion = async (item, e) => {
     e.preventDefault();
@@ -154,7 +154,7 @@ const DashboardMaintenanceChecklist = ({ propertyId }) => {
           <svg className="progress-ring" width="56" height="56">
             <circle className="text-gray-700" strokeWidth="4" stroke="currentColor" fill="transparent" r="24" cx="28" cy="28"></circle>
             <circle 
-              className="text-teal-500" 
+              className="text-sky-400" 
               strokeWidth="4" 
               strokeDasharray="150.72" 
               strokeDashoffset={150.72 - (150.72 * checklist.stats.completionPercentage / 100)} 
@@ -178,7 +178,7 @@ const DashboardMaintenanceChecklist = ({ propertyId }) => {
         
         {loading ? (
           <div className="mt-4 flex justify-center">
-            <svg className="animate-spin h-5 w-5 text-teal-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin h-5 w-5 text-sky-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
@@ -186,14 +186,14 @@ const DashboardMaintenanceChecklist = ({ propertyId }) => {
         ) : error ? (
           <div className="mt-4">
             <p className="text-red-400">{error}</p>
-            <Link to="/maintenance" className="block mt-2 text-teal-500 hover:text-teal-400">
+            <Link to="/maintenance" className="block mt-2 text-sky-400 hover:text-sky-300">
               Set up your checklist
             </Link>
           </div>
         ) : checklist.items.length === 0 ? (
           <div className="mt-4">
             <p className="text-gray-400">No checklist items found.</p>
-            <Link to="/maintenance" className="block mt-2 text-teal-500 hover:text-teal-400">
+            <Link to="/maintenance" className="block mt-2 text-sky-400 hover:text-sky-300">
               Set up your checklist
             </Link>
           </div>
@@ -206,7 +206,7 @@ const DashboardMaintenanceChecklist = ({ propertyId }) => {
                   type="checkbox" 
                   checked={item.is_completed}
                   onChange={(e) => toggleItemCompletion(item, e)}
-                  className="form-checkbox h-4 w-4 text-teal-500 rounded bg-gray-700 border-gray-600" 
+                  className="form-checkbox h-4 w-4 text-sky-400 rounded bg-gray-700 border-gray-600" 
                 />
                 <span className={`ml-2 ${item.is_completed ? 'text-gray-400 line-through' : 'text-gray-300'}`}>
                   {item.task || item.title}
@@ -215,7 +215,7 @@ const DashboardMaintenanceChecklist = ({ propertyId }) => {
             ))}
             
             {/* Show view all link */}
-            <Link to="/maintenance" className="block mt-2 text-teal-500 hover:text-teal-400">
+            <Link to="/maintenance" className="block mt-2 text-sky-400 hover:text-sky-300">
               View full checklist
             </Link>
           </div>

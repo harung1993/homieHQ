@@ -144,8 +144,7 @@ const SignupForm = () => {
       <div className="card w-full max-w-md p-8">
         <div className="flex justify-center mb-6">
           <div className="text-3xl font-bold">
-            <span className="homie-text">Homie</span>
-            <span className="accent-text">HQ</span>
+            <span className="property-text">Property</span>Pal
           </div>
         </div>
         
@@ -166,7 +165,7 @@ const SignupForm = () => {
               <div className="mt-2">
                 <button
                   type="button"
-                  className="text-teal-400 hover:text-teal-300 underline"
+                  className="text-sky-300 hover:text-sky-200 underline"
                   onClick={handleResendVerification}
                 >
                   Resend verification email

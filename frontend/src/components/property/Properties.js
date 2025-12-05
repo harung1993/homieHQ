@@ -51,7 +51,7 @@ const Properties = () => {
   const getPropertyTypeBadge = (type) => {
     switch(type) {
       case 'residential':
-        return 'bg-teal-900 bg-opacity-30 text-teal-300';
+        return 'bg-sky-900 bg-opacity-30 text-sky-200';
       case 'commercial':
         return 'bg-blue-900 bg-opacity-30 text-blue-300';
       case 'industrial':
@@ -174,7 +174,7 @@ const Properties = () => {
                   </div>
                   {property.is_primary_residence && (
                     <div className="absolute bottom-3 left-3">
-                      <span className="bg-teal-500 text-white text-xs px-2 py-1 rounded-full">
+                      <span className="bg-sky-400 text-white text-xs px-2 py-1 rounded-full">
                         Primary Residence
                       </span>
                     </div>
@@ -229,7 +229,7 @@ const Properties = () => {
                   <div className="flex justify-between">
                     <Link 
                       to={`/properties/${property.id}`} 
-                      className="text-teal-500 hover:text-teal-400 text-sm"
+                      className="text-sky-400 hover:text-sky-300 text-sm"
                     >
                       View Details
                     </Link>
@@ -248,10 +248,10 @@ const Properties = () => {
             ))}
             
             {/* Add property card */}
-            <Link to="/add-property" className="card border border-dashed border-gray-600 flex flex-col items-center justify-center h-64 hover:border-teal-500 transition-colors">
+            <Link to="/add-property" className="card border border-dashed border-gray-600 flex flex-col items-center justify-center h-64 hover:border-sky-400 transition-colors">
               <div className="p-6 text-center">
                 <div className="h-16 w-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="h-8 w-8 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-8 w-8 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                   </svg>
                 </div>

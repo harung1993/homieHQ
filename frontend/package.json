@@ -32,6 +32,7 @@
       "react-app/jest"
     ]
   },
+  "proxy": "http://localhost:5008",
   "browserslist": {
     "production": [
       ">0.2%",
@@ -44,7 +45,7 @@
       "last 1 safari version"
     ]
   },
-  "description": "![HomieHQ Logo](https://github.com/yourusername/homiehq/raw/main/public/logo192.png)",
+  "description": "PropertyPal - A comprehensive property management solution",
   "main": "postcss.config.js",
   "keywords": [],
   "author": "",

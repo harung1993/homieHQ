@@ -1,6 +1,6 @@
-# 🏡 HomieHQ
+# 🏡 PropertyPal
 
-HomieHQ is a comprehensive property management system that helps homeowners and landlords manage their properties, maintenance tasks, tenants, documents, and finances in one centralized platform.
+PropertyPal is a comprehensive property management system that helps homeowners and landlords manage their properties, maintenance tasks, tenants, documents, and finances in one centralized platform.
 
 ![Screenshot 2025-05-20 at 1 41 39 PM](https://github.com/user-attachments/assets/4c41fef5-7bb0-43a4-8f95-a709afa7eb04)
 
@@ -36,8 +36,8 @@ HomieHQ is a comprehensive property management system that helps homeowners and 
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/harung43/homieHQ.git
-   cd homieHQ
+   git clone https://github.com/harung43/propertypal.git
+   cd propertypal
    ```
 
 2. **Set up the backend**
@@ -109,7 +109,7 @@ HomieHQ is a comprehensive property management system that helps homeowners and 
 ## 📁 Project Structure
 
 ```
-HomieHQ/
+PropertyPal/
 ├── backend/                 # Flask API backend
 │   ├── app/                 # Application code
 │   ├── migrations/          # Database migrations
@@ -184,7 +184,7 @@ The API follows RESTful conventions. Here are the main endpoint groups:
 
 ## 📜 License
 
-This project is licensed under the HomieHQ Personal Use License - see the LICENSE file for details.
+This project is licensed under the PropertyPal Personal Use License - see the LICENSE file for details.
 
 This license allows for personal, non-commercial use only. Commercial use is prohibited without explicit permission.
 

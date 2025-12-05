@@ -314,13 +314,13 @@ const Maintenance = () => {
         <div className="mb-6 border-b border-gray-700">
           <div className="flex space-x-8">
             <button
-              className={`py-2 px-1 border-b-2 transition-colors ${activeTab === 'items' ? 'border-teal-500 text-white' : 'border-transparent text-gray-400 hover:text-gray-300'}`}
+              className={`py-2 px-1 border-b-2 transition-colors ${activeTab === 'items' ? 'border-sky-400 text-white' : 'border-transparent text-gray-400 hover:text-gray-300'}`}
               onClick={() => setActiveTab('items')}
             >
               Maintenance Requests
             </button>
             <button
-              className={`py-2 px-1 border-b-2 transition-colors ${activeTab === 'checklists' ? 'border-teal-500 text-white' : 'border-transparent text-gray-400 hover:text-gray-300'}`}
+              className={`py-2 px-1 border-b-2 transition-colors ${activeTab === 'checklists' ? 'border-sky-400 text-white' : 'border-transparent text-gray-400 hover:text-gray-300'}`}
               onClick={() => setActiveTab('checklists')}
             >
               Seasonal Checklists

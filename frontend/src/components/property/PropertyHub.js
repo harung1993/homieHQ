@@ -343,7 +343,7 @@ const PropertyHub = () => {
   const getPropertyTypeBadge = (type) => {
     switch(type?.toLowerCase()) {
       case 'residential':
-        return 'bg-teal-900 bg-opacity-30 text-teal-300';
+        return 'bg-sky-900 bg-opacity-30 text-sky-200';
       case 'commercial':
         return 'bg-blue-900 bg-opacity-30 text-blue-300';
       case 'industrial':
@@ -457,7 +457,7 @@ const PropertyHub = () => {
               </div>
             </div>
             <p className="text-sm text-gray-400 mt-3">Scheduled maintenance tasks across all properties</p>
-            <Link to="/maintenance" className="text-teal-500 hover:text-teal-400 text-sm block mt-3">
+            <Link to="/maintenance" className="text-sky-400 hover:text-sky-300 text-sm block mt-3">
               View All Maintenance
             </Link>
           </div>
@@ -476,7 +476,7 @@ const PropertyHub = () => {
               </div>
             </div>
             <p className="text-sm text-gray-400 mt-3">Total expenses for the current month</p>
-            <Link to="/expenses" className="text-teal-500 hover:text-teal-400 text-sm block mt-3">
+            <Link to="/expenses" className="text-sky-400 hover:text-sky-300 text-sm block mt-3">
               Manage Expenses
             </Link>
           </div>
@@ -495,7 +495,7 @@ const PropertyHub = () => {
               </div>
             </div>
             <p className="text-sm text-gray-400 mt-3">Appliances with warranties expiring in the next 90 days</p>
-            <Link to="/appliances" className="text-teal-500 hover:text-teal-400 text-sm block mt-3">
+            <Link to="/appliances" className="text-sky-400 hover:text-sky-300 text-sm block mt-3">
               View Appliances
             </Link>
           </div>
@@ -513,7 +513,7 @@ const PropertyHub = () => {
               </div>
               <div className="w-full bg-gray-700 rounded-full h-2.5">
                 <div 
-                  className="bg-teal-500 h-2.5 rounded-full" 
+                  className="bg-sky-400 h-2.5 rounded-full" 
                   style={{ width: `${seasonalPercentage}%` }}
                 ></div>
               </div>
@@ -528,7 +528,7 @@ const PropertyHub = () => {
                   ))}
               </div>
             </div>
-            <Link to="/maintenance" className="text-teal-500 hover:text-teal-400 text-sm block mt-3">
+            <Link to="/maintenance" className="text-sky-400 hover:text-sky-300 text-sm block mt-3">
               View Maintenance Checklists
             </Link>
           </div>
@@ -558,7 +558,7 @@ const PropertyHub = () => {
                 </div>
               )}
             </div>
-            <Link to="/expenses" className="text-teal-500 hover:text-teal-400 text-sm block mt-3">
+            <Link to="/expenses" className="text-sky-400 hover:text-sky-300 text-sm block mt-3">
               View Budget & Expenses
             </Link>
           </div>
@@ -663,7 +663,7 @@ const PropertyHub = () => {
                   </div>
                   {property.is_primary_residence && (
                     <div className="absolute bottom-3 left-3">
-                      <span className="bg-teal-500 text-white text-xs px-2 py-1 rounded-full">
+                      <span className="bg-sky-400 text-white text-xs px-2 py-1 rounded-full">
                         Primary Residence
                       </span>
                     </div>
@@ -720,7 +720,7 @@ const PropertyHub = () => {
                       {!property.is_primary_residence ? (
                         <button 
                           onClick={(e) => setAsPrimaryResidence(property.id, e)}
-                          className="text-teal-500 hover:text-teal-400 text-sm"
+                          className="text-sky-400 hover:text-sky-300 text-sm"
                         >
                           Set as Primary
                         </button>
@@ -746,10 +746,10 @@ const PropertyHub = () => {
             ))}
             
             {/* Add property card */}
-            <Link to="/add-property" className="card border border-dashed border-gray-600 flex flex-col items-center justify-center h-64 hover:border-teal-500 transition-colors">
+            <Link to="/add-property" className="card border border-dashed border-gray-600 flex flex-col items-center justify-center h-64 hover:border-sky-400 transition-colors">
               <div className="p-6 text-center">
                 <div className="h-16 w-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="h-8 w-8 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-8 w-8 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                   </svg>
                 </div>
@@ -815,13 +815,13 @@ const PropertyHub = () => {
                       {selectedProperty.is_primary_residence && (
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-400">Primary</span>
-                          <span className="text-teal-500">Yes</span>
+                          <span className="text-sky-400">Yes</span>
                         </div>
                       )}
                       
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-400">Status</span>
-                        <span className="text-teal-500">{selectedProperty.status?.charAt(0).toUpperCase() + selectedProperty.status?.slice(1) || 'Active'}</span>
+                        <span className="text-sky-400">{selectedProperty.status?.charAt(0).toUpperCase() + selectedProperty.status?.slice(1) || 'Active'}</span>
                       </div>
                     </div>
                   </div>
@@ -937,7 +937,7 @@ const PropertyHub = () => {
               ))}
               {expiringAppliances.length > 3 && (
                 <div className="py-3 text-center">
-                  <Link to="/appliances" className="text-teal-500 hover:text-teal-400 text-sm">
+                  <Link to="/appliances" className="text-sky-400 hover:text-sky-300 text-sm">
                     View all {expiringAppliances.length} expiring warranties
                   </Link>
                 </div>

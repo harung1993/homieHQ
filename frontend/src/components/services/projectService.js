@@ -119,8 +119,8 @@ const projectService = {
         badge: 'bg-blue-900 text-blue-300 bg-opacity-30'
       },
       'in-progress': {
-        bg: 'bg-teal-500', 
-        badge: 'bg-teal-900 text-teal-300 bg-opacity-30'
+        bg: 'bg-sky-400', 
+        badge: 'bg-sky-900 text-sky-200 bg-opacity-30'
       },
       'on-hold': {
         bg: 'bg-yellow-500', 
@@ -133,7 +133,7 @@ const projectService = {
     };
     
     return statusColors[status] || {
-      bg: 'bg-teal-500', 
+      bg: 'bg-sky-400', 
       badge: 'bg-gray-700 text-gray-300'
     };
   },

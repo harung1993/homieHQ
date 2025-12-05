@@ -493,7 +493,7 @@ const Documents = () => {
               type="button"
               className={`px-4 py-2 text-sm font-medium rounded-l-lg ${
                 docType === 'property' 
-                  ? 'bg-teal-600 text-white' 
+                  ? 'bg-sky-500 text-white' 
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
               onClick={() => setDocType('property')}
@@ -504,7 +504,7 @@ const Documents = () => {
               type="button"
               className={`px-4 py-2 text-sm font-medium rounded-r-lg ${
                 docType === 'tenant' 
-                  ? 'bg-teal-600 text-white' 
+                  ? 'bg-sky-500 text-white' 
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
               onClick={() => setDocType('tenant')}

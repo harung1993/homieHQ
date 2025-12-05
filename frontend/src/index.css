@@ -4,13 +4,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom CSS variables for HomieHQ theming */
+/* Custom CSS variables for PropertyPal theming */
 :root {
-  --primary: #2C5282;
-  --secondary: #38B2AC;
+  --primary: #38bdf8;
+  --secondary: #3b82f6;
   --accent: #ED8936;
-  --homie-color: #38B2AC; /* Teal color for "Home" */
-  --property-color: #4299E1; /* Blue color for "Property" */
+  --property-color: #38bdf8; /* Sky blue color for "Property" */
   --background: #1F2937;
   --card-bg: #2D3748;
   --text: #E5E7EB;
@@ -81,7 +80,7 @@ code {
 }
 
 .form-input {
-  @apply bg-input-bg border border-input-border text-text rounded-md p-3 w-full focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent;
+  @apply bg-input-bg border border-input-border text-text rounded-md p-3 w-full focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent;
 }
 
 .form-label {
@@ -110,7 +109,7 @@ code {
 }
 
 .sidebar-link:hover, .sidebar-link.active {
-  background-color: rgba(56, 178, 172, 0.1);
+  background-color: rgba(56, 189, 248, 0.1);
   color: var(--text);
   border-left: 3px solid var(--secondary);
 }
@@ -146,10 +145,6 @@ code {
 }
 
 /* Text colors */
-.homie-text {
-  color: var(--homie-color);
-}
-
 .property-text {
   color: var(--property-color);
 }

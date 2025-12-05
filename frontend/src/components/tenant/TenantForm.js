@@ -272,17 +272,6 @@ const TenantForm = () => {
     }
   };
 
-  // Format date for display
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
 
   // Handle upload document
   const handleUploadDocument = async (e) => {
@@ -869,7 +858,7 @@ const TenantForm = () => {
                   </p>
                   <button 
                     type="button"
-                    className="text-teal-500 hover:text-teal-400 text-sm mt-2"
+                    className="text-sky-400 hover:text-sky-300 text-sm mt-2"
                     onClick={() => setShowDocumentsSection(true)}
                   >
                     View & Manage Documents
@@ -883,7 +872,7 @@ const TenantForm = () => {
                   <p className="text-gray-400 mb-2">No documents attached yet</p>
                   <button 
                     type="button"
-                    className="text-teal-500 hover:text-teal-400 text-sm"
+                    className="text-sky-400 hover:text-sky-300 text-sm"
                     onClick={() => setShowDocumentsSection(true)}
                   >
                     Add Documents

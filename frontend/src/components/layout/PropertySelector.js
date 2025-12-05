@@ -108,10 +108,10 @@ const PropertySelector = ({ currentProperty, onSelectProperty }) => {
       )}
       
       <div 
-        className="flex items-center p-3 bg-teal-900 bg-opacity-20 rounded-lg cursor-pointer"
+        className="flex items-center p-3 bg-sky-900 bg-opacity-20 rounded-lg cursor-pointer"
         onClick={toggleDropdown}
       >
-        <svg className="h-6 w-6 text-teal-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-6 w-6 text-sky-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
         </svg>
         <div>
@@ -119,7 +119,7 @@ const PropertySelector = ({ currentProperty, onSelectProperty }) => {
           <h3 className="text-md font-semibold">
             {currentProperty ? currentProperty.address : 'No property added yet'}
             {currentProperty && currentProperty.is_primary_residence && (
-              <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-teal-900 text-teal-300 bg-opacity-30">
+              <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-sky-900 text-sky-200 bg-opacity-30">
                 Primary
               </span>
             )}
@@ -152,13 +152,13 @@ const PropertySelector = ({ currentProperty, onSelectProperty }) => {
                 {properties.map(property => (
                   <div key={property.id} className="relative group">
                     <button 
-                      className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-700 ${currentProperty && property.id === currentProperty.id ? 'bg-teal-900 bg-opacity-20 text-teal-400' : 'text-gray-300'}`}
+                      className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-700 ${currentProperty && property.id === currentProperty.id ? 'bg-sky-900 bg-opacity-20 text-sky-300' : 'text-gray-300'}`}
                       onClick={() => handleSelectProperty(property)}
                     >
                       <div className="font-medium">
                         {property.address}
                         {property.is_primary_residence && (
-                          <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-teal-900 text-teal-300 bg-opacity-30">
+                          <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-sky-900 text-sky-200 bg-opacity-30">
                             Primary
                           </span>
                         )}
@@ -169,7 +169,7 @@ const PropertySelector = ({ currentProperty, onSelectProperty }) => {
                     {/* Set as Primary button - only show for non-primary properties */}
                     {!property.is_primary_residence && (
                       <button
-                        className="absolute right-2 top-2 p-1 rounded-full bg-teal-900 bg-opacity-30 text-teal-400 hover:bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute right-2 top-2 p-1 rounded-full bg-sky-900 bg-opacity-30 text-sky-300 hover:bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={(e) => handleSetAsPrimary(property.id, e)}
                         title="Set as primary residence"
                       >
@@ -184,7 +184,7 @@ const PropertySelector = ({ currentProperty, onSelectProperty }) => {
                 <div className="border-t border-gray-700 mt-2 pt-2">
                   <Link
                     to="/add-property"
-                    className="block px-4 py-2 text-sm text-teal-500 hover:bg-gray-700"
+                    className="block px-4 py-2 text-sm text-sky-400 hover:bg-gray-700"
                   >
                     <div className="flex items-center">
                       <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

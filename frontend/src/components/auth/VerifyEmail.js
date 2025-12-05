@@ -60,8 +60,7 @@ const VerifyEmail = () => {
       <div className="card w-full max-w-md p-8">
         <div className="flex justify-center mb-6">
           <div className="text-3xl font-bold">
-            <span className="homie-text">Homie</span>
-            <span className="accent-text">HQ</span>
+            <span className="property-text">Property</span>Pal
           </div>
         </div>
         
@@ -69,7 +68,7 @@ const VerifyEmail = () => {
         
         {verifying ? (
           <div className="text-center py-8">
-            <div className="animate-spin h-10 w-10 border-4 border-teal-500 border-opacity-50 rounded-full border-t-transparent mx-auto mb-4"></div>
+            <div className="animate-spin h-10 w-10 border-4 border-sky-400 border-opacity-50 rounded-full border-t-transparent mx-auto mb-4"></div>
             <p className="text-gray-400">Verifying your email address...</p>
           </div>
         ) : (
@@ -80,7 +79,7 @@ const VerifyEmail = () => {
                 <div className="mt-4">
                   <button
                     type="button"
-                    className="text-teal-400 hover:text-teal-300 underline text-sm"
+                    className="text-sky-300 hover:text-sky-200 underline text-sm"
                     onClick={handleResendVerification}
                   >
                     Resend verification email

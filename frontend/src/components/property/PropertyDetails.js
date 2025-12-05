@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { apiHelpers, API_BASE_URL } from '../../services/api';
 import Navigation from '../layout/Navigation';
@@ -24,27 +24,8 @@ const PropertyDetails = () => {
     documents: 0
   });
 
-  useEffect(() => {
-    // Check if user is logged in
-    const userString = localStorage.getItem('user');
-    const token = localStorage.getItem('accessToken');
-    
-    if (!userString || !token) {
-      navigate('/login');
-      return;
-    }
-    
-    setUser(JSON.parse(userString));
-    
-    // Fetch property details
-    fetchPropertyDetails(propertyId);
-    
-    // Fetch property metrics
-    fetchPropertyMetrics(propertyId);
-  }, [navigate, propertyId]);
-
   // Fetch property details
-  const fetchPropertyDetails = async (id) => {
+  const fetchPropertyDetails = useCallback(async (id) => {
     try {
       setLoading(true);
       const propertyData = await apiHelpers.get(`/properties/${id}`);
@@ -59,7 +40,7 @@ const PropertyDetails = () => {
       setError('Failed to load property details. Please try again later.');
       setLoading(false);
     }
-  };
+  }, []);
 
   // New function to fetch tenants for the property
   const fetchPropertyTenants = async (propertyId) => {
@@ -118,6 +99,25 @@ const PropertyDetails = () => {
     }
   };
 
+  useEffect(() => {
+    // Check if user is logged in
+    const userString = localStorage.getItem('user');
+    const token = localStorage.getItem('accessToken');
+
+    if (!userString || !token) {
+      navigate('/login');
+      return;
+    }
+
+    setUser(JSON.parse(userString));
+
+    // Fetch property details
+    fetchPropertyDetails(propertyId);
+
+    // Fetch property metrics
+    fetchPropertyMetrics(propertyId);
+  }, [navigate, propertyId, fetchPropertyDetails]);
+
   // Set property as current and navigate to dashboard
   const manageProperty = () => {
     localStorage.setItem('currentPropertyId', propertyId);
@@ -168,7 +168,7 @@ const PropertyDetails = () => {
   const getPropertyTypeBadge = (type) => {
     switch(type?.toLowerCase()) {
       case 'residential':
-        return 'bg-teal-900 bg-opacity-30 text-teal-300';
+        return 'bg-sky-900 bg-opacity-30 text-sky-200';
       case 'commercial':
         return 'bg-blue-900 bg-opacity-30 text-blue-300';
       case 'industrial':
@@ -213,7 +213,7 @@ const PropertyDetails = () => {
           <div className="flex space-x-3">
             {property && !property.is_primary_residence && (
               <button 
-                className="px-4 py-2 border border-teal-500 text-teal-500 hover:bg-teal-500 hover:bg-opacity-20 rounded-md text-sm"
+                className="px-4 py-2 border border-sky-400 text-sky-400 hover:bg-sky-400 hover:bg-opacity-20 rounded-md text-sm"
                 onClick={setAsPrimaryResidence}
                 disabled={loading}
               >
@@ -306,7 +306,7 @@ const PropertyDetails = () => {
                     </span>
                     
                     {property.is_primary_residence && (
-                      <span className="bg-teal-500 text-white text-xs px-2 py-1 rounded-full">
+                      <span className="bg-sky-400 text-white text-xs px-2 py-1 rounded-full">
                         Primary Residence
                       </span>
                     )}
@@ -387,7 +387,7 @@ const PropertyDetails = () => {
                     </svg>
                   </div>
                 </div>
-                <Link to="/maintenance" onClick={manageProperty} className="text-teal-500 hover:text-teal-400 text-sm block mt-4">
+                <Link to="/maintenance" onClick={manageProperty} className="text-sky-400 hover:text-sky-300 text-sm block mt-4">
                   View Maintenance
                 </Link>
               </div>
@@ -404,7 +404,7 @@ const PropertyDetails = () => {
                     </svg>
                   </div>
                 </div>
-                <Link to="/expenses" onClick={manageProperty} className="text-teal-500 hover:text-teal-400 text-sm block mt-4">
+                <Link to="/expenses" onClick={manageProperty} className="text-sky-400 hover:text-sky-300 text-sm block mt-4">
                   View Expenses
                 </Link>
               </div>
@@ -421,7 +421,7 @@ const PropertyDetails = () => {
                     </svg>
                   </div>
                 </div>
-                <Link to="/projects" onClick={manageProperty} className="text-teal-500 hover:text-teal-400 text-sm block mt-4">
+                <Link to="/projects" onClick={manageProperty} className="text-sky-400 hover:text-sky-300 text-sm block mt-4">
                   View Projects
                 </Link>
               </div>
@@ -438,7 +438,7 @@ const PropertyDetails = () => {
                     </svg>
                   </div>
                 </div>
-                <Link to="/documents" onClick={manageProperty} className="text-teal-500 hover:text-teal-400 text-sm block mt-4">
+                <Link to="/documents" onClick={manageProperty} className="text-sky-400 hover:text-sky-300 text-sm block mt-4">
                   View Documents
                 </Link>
               </div>
@@ -483,7 +483,7 @@ const PropertyDetails = () => {
                       <div className="flex-shrink-0 ml-4">
                         <Link 
                           to={`/tenants/edit/${tenant.id}`}
-                          className="text-teal-500 hover:text-teal-400 text-sm"
+                          className="text-sky-400 hover:text-sky-300 text-sm"
                         >
                           View Details
                         </Link>

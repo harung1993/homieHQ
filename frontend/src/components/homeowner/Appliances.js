@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import Navigation from '../layout/Navigation';
 import PropertySelector from '../layout/PropertySelector';
 import { apiHelpers } from '../../services/api';
-import propertyService from '../../services/propertyService';
 
 const Appliances = () => {
   const navigate = useNavigate();
