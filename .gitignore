@@ -1,3 +1,22 @@
+# ======================================
+# DEVELOPMENT DOCS & SUMMARIES
+# ======================================
+# Exclude all summary and guide files (dev notes only)
+*SUMMARY*.md
+*STRUCTURE*.md
+*GUIDE*.md
+*CLEANUP*.md
+*ARCHITECTURE*.md
+*INTEGRATION*.md
+DOCKER_MOBILE_SETUP.md
+QUICK_START_DOCKER_MOBILE.md
+GITIGNORE_UPDATE_SUMMARY.md
+CLAUDE_CLEANUP_SUMMARY.md
+
+# Keep only essential docs
+!README.md
+!DOCKER.md
+
 # Python
 __pycache__/
 *.py[cod]
@@ -72,6 +91,7 @@ coverage.xml
 *.iws
 *.ipr
 .idea_modules/
+.claude/
 
 # User uploads
 uploads/
@@ -104,3 +124,26 @@ app_uploads/
 nginx/ssl/*.pem
 nginx/ssl/*.key
 nginx/ssl/*.crt
+
+# ======================================
+# MOBILE APP - Separate Repository
+# ======================================
+# The mobile app will be in its own repo
+# Exclude ALL mobile app files (will be in separate repo)
+mobile-app/
+
+# Mobile app build artifacts
+*.apk
+*.ipa
+*.aab
+android/app/build/
+ios/Pods/
+ios/build/
+
+# Expo
+.expo/
+.expo-shared/
+expo-env.d.ts
+
+# Mobile environment
+.env.mobile
