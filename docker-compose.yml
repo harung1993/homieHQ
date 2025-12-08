@@ -54,6 +54,8 @@ services:
       - DEMO_SESSION_TIMEOUT=${DEMO_SESSION_TIMEOUT:-600}  # 10 minutes in seconds
       # Email verification override for dev/demo
       - SKIP_EMAIL_VERIFICATION=${SKIP_EMAIL_VERIFICATION:-false}
+      # Mobile app support - Allow CORS from mobile devices
+      - MOBILE_CORS_ENABLED=${MOBILE_CORS_ENABLED:-true}
     depends_on:
       db:
         condition: service_healthy

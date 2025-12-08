@@ -1,0 +1,204 @@
+# PropertyPal Home Assistant Dashboard Configuration
+# Add this to your Lovelace dashboard
+
+views:
+  - title: PropertyPal
+    icon: mdi:home-analytics
+    cards:
+      # ============================================================================
+      # Overview Card
+      # ============================================================================
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: |
+              # 🏠 PropertyPal Maintenance
+              Your property maintenance dashboard
+
+          - type: glance
+            title: Task Summary
+            entities:
+              - entity: sensor.propertypal_maintenance_tasks
+                name: Total Tasks
+                icon: mdi:clipboard-list
+              - entity: sensor.propertypal_high_priority_tasks
+                name: High Priority
+                icon: mdi:alert-circle
+              - entity: sensor.propertypal_overdue_tasks
+                name: Overdue
+                icon: mdi:clock-alert
+
+      # ============================================================================
+      # Next Due Task
+      # ============================================================================
+      - type: entities
+        title: 📅 Next Due Task
+        show_header_toggle: false
+        entities:
+          - entity: sensor.propertypal_next_due_task
+            type: custom:multiple-entity-row
+            name: Task
+            secondary_info: last-changed
+            entities:
+              - attribute: due_date
+                name: Due
+              - attribute: priority
+                name: Priority
+
+      # ============================================================================
+      # All Maintenance Tasks
+      # ============================================================================
+      - type: markdown
+        title: 📋 All Tasks
+        content: |
+          {% set tasks = state_attr('sensor.propertypal_maintenance_tasks', 'tasks') | default([]) %}
+          {% if tasks | length == 0 %}
+          **No pending tasks** ✅
+          {% else %}
+          {% for task in tasks | selectattr('status', 'ne', 'completed') | sort(attribute='due_date') %}
+          ---
+          **{{ task.title }}** {% if task.priority == 'high' %}🔴{% elif task.priority == 'medium' %}🟡{% else %}🟢{% endif %}
+
+          {% if task.description %}*{{ task.description }}*{% endif %}
+
+          Status: `{{ task.status }}` | Due: {{ task.due_date if task.due_date else 'No date' }}
+
+          {% endfor %}
+          {% endif %}
+
+      # ============================================================================
+      # High Priority Tasks
+      # ============================================================================
+      - type: conditional
+        conditions:
+          - entity: sensor.propertypal_high_priority_tasks
+            state_not: "0"
+        card:
+          type: markdown
+          title: 🚨 High Priority Tasks
+          card_mod:
+            style: |
+              ha-card {
+                background-color: rgba(255, 0, 0, 0.1);
+                border-left: 4px solid red;
+              }
+          content: |
+            {% set high_tasks = state_attr('sensor.propertypal_high_priority_tasks', 'tasks') | default([]) %}
+            {% for task in high_tasks %}
+            **{{ task.title }}**
+            {% if task.description %}{{ task.description }}{% endif %}
+            Due: {{ task.due_date if task.due_date else 'ASAP' }}
+
+            ---
+            {% endfor %}
+
+      # ============================================================================
+      # Overdue Tasks Alert
+      # ============================================================================
+      - type: conditional
+        conditions:
+          - entity: sensor.propertypal_overdue_tasks
+            state_not: "0"
+        card:
+          type: markdown
+          title: ⚠️ Overdue Tasks
+          card_mod:
+            style: |
+              ha-card {
+                background-color: rgba(255, 165, 0, 0.1);
+                border-left: 4px solid orange;
+              }
+          content: |
+            You have **{{ states('sensor.propertypal_overdue_tasks') }}** overdue tasks!
+
+            Please check PropertyPal to review and complete them.
+
+      # ============================================================================
+      # Quick Actions
+      # ============================================================================
+      - type: entities
+        title: 🎯 Quick Actions
+        show_header_toggle: false
+        entities:
+          - type: button
+            name: Create Task
+            icon: mdi:plus-circle
+            tap_action:
+              action: call-service
+              service: rest_command.propertypal_create_task
+              data:
+                title: "New Task"
+                description: "Created from Home Assistant"
+                priority: "medium"
+                property_id: 1
+
+          - type: button
+            name: Refresh Tasks
+            icon: mdi:refresh
+            tap_action:
+              action: call-service
+              service: homeassistant.update_entity
+              target:
+                entity_id: sensor.propertypal_maintenance_tasks
+
+      # ============================================================================
+      # Task History (Last 7 Days)
+      # ============================================================================
+      - type: history-graph
+        title: Task Trends
+        hours_to_show: 168
+        entities:
+          - entity: sensor.propertypal_maintenance_tasks
+            name: Total Tasks
+          - entity: sensor.propertypal_high_priority_tasks
+            name: High Priority
+          - entity: sensor.propertypal_overdue_tasks
+            name: Overdue
+
+      # ============================================================================
+      # Task Calendar (if using calendar integration)
+      # ============================================================================
+      - type: calendar
+        title: 📆 Maintenance Schedule
+        entities:
+          - calendar.propertypal_maintenance
+
+# ============================================================================
+# Mobile App Dashboard View (Optimized for small screens)
+# ============================================================================
+  - title: PropertyPal Mobile
+    icon: mdi:cellphone
+    path: propertypal-mobile
+    panel: false
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: custom:mushroom-chips-card
+            chips:
+              - type: template
+                icon: mdi:clipboard-list
+                content: "{{ states('sensor.propertypal_maintenance_tasks') }}"
+                icon_color: blue
+              - type: template
+                icon: mdi:alert-circle
+                content: "{{ states('sensor.propertypal_high_priority_tasks') }}"
+                icon_color: red
+              - type: template
+                icon: mdi:clock-alert
+                content: "{{ states('sensor.propertypal_overdue_tasks') }}"
+                icon_color: orange
+
+          - type: custom:mushroom-title-card
+            title: Maintenance Tasks
+
+          # Simple task list for mobile
+          - type: markdown
+            content: |
+              {% set tasks = state_attr('sensor.propertypal_maintenance_tasks', 'tasks') | default([]) %}
+              {% for task in tasks | selectattr('status', 'ne', 'completed') | sort(attribute='priority', reverse=true) | list[:5] %}
+              {% if task.priority == 'high' %}🔴{% elif task.priority == 'medium' %}🟡{% else %}🟢{% endif %} **{{ task.title }}**
+              {% endfor %}
+
+              {% if tasks | selectattr('status', 'ne', 'completed') | list | count > 5 %}
+              *...and {{ (tasks | selectattr('status', 'ne', 'completed') | list | count) - 5 }} more*
+              {% endif %}

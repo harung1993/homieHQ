@@ -47,7 +47,18 @@ const Settings = () => {
   const [currentProperty, setCurrentProperty] = useState(null);
   const [primaryResidenceId, setPrimaryResidenceId] = useState('');
   const [loadingProperties, setLoadingProperties] = useState(false);
-  
+
+  // API Keys state
+  const [apiKeys, setApiKeys] = useState([]);
+  const [loadingApiKeys, setLoadingApiKeys] = useState(false);
+  const [showNewKeyModal, setShowNewKeyModal] = useState(false);
+  const [newApiKey, setNewApiKey] = useState(null);
+  const [newKeyFormData, setNewKeyFormData] = useState({
+    name: '',
+    scopes: ['read:maintenance', 'write:maintenance'],
+    expires_days: ''
+  });
+
   // Fetch user when component mounts
   useEffect(() => {
     const userString = localStorage.getItem('user');
@@ -169,6 +180,67 @@ const Settings = () => {
   // Handle timezone change
   const handleTimezoneChange = (e) => {
     setTimezone(e.target.value);
+  };
+
+  // API Keys functions
+  const fetchApiKeys = async () => {
+    try {
+      setLoadingApiKeys(true);
+      const response = await apiHelpers.get('integrations/api-keys');
+      setApiKeys(response.api_keys || []);
+    } catch (err) {
+      console.error('Error fetching API keys:', err);
+      setError('Failed to load API keys');
+    } finally {
+      setLoadingApiKeys(false);
+    }
+  };
+
+  const handleCreateApiKey = async (e) => {
+    e.preventDefault();
+    try {
+      setError('');
+      const response = await apiHelpers.post('integrations/api-keys', newKeyFormData);
+      setNewApiKey(response.api_key);
+      setShowNewKeyModal(true);
+      setNewKeyFormData({ name: '', scopes: ['read:maintenance', 'write:maintenance'], expires_days: '' });
+      await fetchApiKeys();
+      setMessage('API key created successfully!');
+    } catch (err) {
+      console.error('Error creating API key:', err);
+      setError(err.response?.data?.error || 'Failed to create API key');
+    }
+  };
+
+  const handleDeleteApiKey = async (keyId) => {
+    if (!window.confirm('Are you sure you want to delete this API key? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      await apiHelpers.delete(`integrations/api-keys/${keyId}`);
+      setMessage('API key deleted successfully');
+      await fetchApiKeys();
+    } catch (err) {
+      console.error('Error deleting API key:', err);
+      setError('Failed to delete API key');
+    }
+  };
+
+  const handleToggleApiKey = async (keyId) => {
+    try {
+      await apiHelpers.put(`integrations/api-keys/${keyId}/toggle`);
+      setMessage('API key status updated');
+      await fetchApiKeys();
+    } catch (err) {
+      console.error('Error toggling API key:', err);
+      setError('Failed to update API key');
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    setMessage('Copied to clipboard!');
+    setTimeout(() => setMessage(''), 3000);
   };
 
   // Handle primary residence change
@@ -470,6 +542,18 @@ const Settings = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
                   </svg>
                   Data & Privacy
+                </button>
+
+                <button
+                  className={`px-4 py-2 rounded-md text-left flex items-center ${
+                    activeTab === 'api-keys' ? 'bg-sky-900 bg-opacity-20 text-sky-400' : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
+                  }`}
+                  onClick={() => { setActiveTab('api-keys'); fetchApiKeys(); }}
+                >
+                  <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                  </svg>
+                  API Keys
                 </button>
               </nav>
             </div>
@@ -942,6 +1026,201 @@ const Settings = () => {
                         Delete Account
                       </button>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* API Keys Tab */}
+              {activeTab === 'api-keys' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-xl font-semibold">API Keys</h2>
+                      <p className="text-gray-400 text-sm mt-1">
+                        Manage API keys for integrations like Home Assistant
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowNewKeyModal(!showNewKeyModal)}
+                      className="btn-primary px-4 py-2 rounded-md text-sm"
+                    >
+                      + Create New Key
+                    </button>
+                  </div>
+
+                  {/* Create New Key Form */}
+                  {showNewKeyModal && newApiKey && (
+                    <div className="bg-yellow-900 bg-opacity-20 border border-yellow-500 rounded-lg p-4 mb-6">
+                      <h3 className="text-lg font-semibold text-yellow-400 mb-2">⚠️ Save Your API Key</h3>
+                      <p className="text-sm text-gray-300 mb-3">
+                        This is the only time you'll see this key. Copy it now and store it securely!
+                      </p>
+                      <div className="bg-gray-900 p-3 rounded font-mono text-sm break-all flex justify-between items-center">
+                        <span>{newApiKey}</span>
+                        <button
+                          onClick={() => copyToClipboard(newApiKey)}
+                          className="ml-2 text-sky-400 hover:text-sky-300"
+                        >
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => { setShowNewKeyModal(false); setNewApiKey(null); }}
+                        className="mt-3 text-sm text-gray-400 hover:text-gray-300"
+                      >
+                        I've saved my key, close this
+                      </button>
+                    </div>
+                  )}
+
+                  {!newApiKey && showNewKeyModal && (
+                    <div className="bg-gray-800 rounded-lg p-4 mb-6">
+                      <h3 className="text-lg font-semibold mb-4">Create New API Key</h3>
+                      <form onSubmit={handleCreateApiKey} className="space-y-4">
+                        <div>
+                          <label className="form-label">Key Name</label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder="e.g., Home Assistant"
+                            value={newKeyFormData.name}
+                            onChange={(e) => setNewKeyFormData({...newKeyFormData, name: e.target.value})}
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="form-label">Permissions</label>
+                          <div className="space-y-2">
+                            <label className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={newKeyFormData.scopes.includes('read:maintenance')}
+                                onChange={(e) => {
+                                  const scopes = e.target.checked
+                                    ? [...newKeyFormData.scopes, 'read:maintenance']
+                                    : newKeyFormData.scopes.filter(s => s !== 'read:maintenance');
+                                  setNewKeyFormData({...newKeyFormData, scopes});
+                                }}
+                                className="mr-2"
+                              />
+                              <span className="text-sm">Read Maintenance Tasks</span>
+                            </label>
+                            <label className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={newKeyFormData.scopes.includes('write:maintenance')}
+                                onChange={(e) => {
+                                  const scopes = e.target.checked
+                                    ? [...newKeyFormData.scopes, 'write:maintenance']
+                                    : newKeyFormData.scopes.filter(s => s !== 'write:maintenance');
+                                  setNewKeyFormData({...newKeyFormData, scopes});
+                                }}
+                                className="mr-2"
+                              />
+                              <span className="text-sm">Create/Update Maintenance Tasks</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="form-label">Expiration (Optional)</label>
+                          <input
+                            type="number"
+                            className="form-input"
+                            placeholder="Days until expiration (leave empty for no expiration)"
+                            value={newKeyFormData.expires_days}
+                            onChange={(e) => setNewKeyFormData({...newKeyFormData, expires_days: e.target.value})}
+                          />
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button type="submit" className="btn-primary px-4 py-2 rounded-md">
+                            Create API Key
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowNewKeyModal(false)}
+                            className="btn-secondary px-4 py-2 rounded-md"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* API Keys List */}
+                  {loadingApiKeys ? (
+                    <div className="text-center py-8 text-gray-400">Loading API keys...</div>
+                  ) : apiKeys.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400">
+                      <svg className="h-12 w-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                      </svg>
+                      <p>No API keys yet</p>
+                      <p className="text-sm mt-1">Create your first API key to integrate with Home Assistant</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {apiKeys.map((key) => (
+                        <div key={key.id} className="bg-gray-800 rounded-lg p-4 flex justify-between items-center">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3">
+                              <h4 className="font-medium">{key.name}</h4>
+                              <span className={`text-xs px-2 py-1 rounded ${key.is_active ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'}`}>
+                                {key.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-400 mt-1">
+                              <span className="font-mono">{key.key_prefix}...</span>
+                              {key.last_used_at && (
+                                <span className="ml-3">Last used: {new Date(key.last_used_at).toLocaleDateString()}</span>
+                              )}
+                              {key.expires_at && (
+                                <span className="ml-3">Expires: {new Date(key.expires_at).toLocaleDateString()}</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Scopes: {key.scopes.join(', ')}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleToggleApiKey(key.id)}
+                              className="text-sm px-3 py-1 rounded hover:bg-gray-700"
+                              title={key.is_active ? 'Deactivate' : 'Activate'}
+                            >
+                              {key.is_active ? '⏸ Disable' : '▶️ Enable'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteApiKey(key.id)}
+                              className="text-sm px-3 py-1 rounded bg-red-900 bg-opacity-20 text-red-400 hover:bg-opacity-30"
+                            >
+                              🗑 Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Documentation Link */}
+                  <div className="mt-6 bg-blue-900 bg-opacity-20 border border-blue-800 rounded-lg p-4">
+                    <h3 className="font-semibold mb-2">📚 Integration Guide</h3>
+                    <p className="text-sm text-gray-300 mb-3">
+                      Learn how to integrate PropertyPal with Home Assistant using API keys
+                    </p>
+                    <a
+                      href="https://github.com/yourrepo/propertypal/blob/main/HOME_ASSISTANT_INTEGRATION.md"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sky-400 hover:text-sky-300 text-sm"
+                    >
+                      View Documentation →
+                    </a>
                   </div>
                 </div>
               )}

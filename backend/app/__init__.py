@@ -113,6 +113,7 @@ def create_app(config_class=Config):
     from app.api.settings import settings_bp
     from app.api.tenants import tenants_bp
     from app.api.property_users import property_users_bp
+    from app.api.integrations import integrations_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(properties_bp, url_prefix='/api/properties')
@@ -127,5 +128,6 @@ def create_app(config_class=Config):
     app.register_blueprint(settings_bp, url_prefix='/api/settings')
     app.register_blueprint(tenants_bp, url_prefix='/api/tenants')
     app.register_blueprint(property_users_bp, url_prefix='/api/property-users')
+    app.register_blueprint(integrations_bp, url_prefix='/api/integrations')
     return app
 

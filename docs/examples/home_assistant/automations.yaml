@@ -1,0 +1,222 @@
+# PropertyPal Home Assistant Automations
+# Add these to your automations.yaml
+
+# ============================================================================
+# Monthly Recurring Tasks
+# ============================================================================
+
+# HVAC Filter Replacement - First of every month
+- alias: "PropertyPal: Monthly HVAC Filter"
+  description: "Create monthly HVAC filter replacement task"
+  trigger:
+    - platform: time
+      at: "08:00:00"
+  condition:
+    - condition: template
+      value_template: "{{ now().day == 1 }}"
+  action:
+    - service: rest_command.propertypal_create_task
+      data:
+        title: "Replace HVAC Filter"
+        description: "Monthly HVAC air filter replacement due"
+        priority: "medium"
+        property_id: 1
+        due_date: "{{ (now() + timedelta(days=30)).strftime('%Y-%m-%d') }}"
+
+# Water Filter Replacement - Every 3 months
+- alias: "PropertyPal: Quarterly Water Filter"
+  description: "Create water filter replacement task every 3 months"
+  trigger:
+    - platform: time
+      at: "08:00:00"
+  condition:
+    - condition: template
+      value_template: "{{ now().day == 1 and now().month % 3 == 1 }}"
+  action:
+    - service: rest_command.propertypal_create_task
+      data:
+        title: "Replace Water Filter"
+        description: "Quarterly refrigerator water filter replacement"
+        priority: "low"
+        property_id: 1
+
+# ============================================================================
+# Smart Home Triggered Tasks
+# ============================================================================
+
+# Water Leak Detection
+- alias: "PropertyPal: Water Leak Emergency"
+  description: "Create urgent task when water leak detected"
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.water_leak_sensor
+      to: "on"
+  action:
+    - service: rest_command.propertypal_create_task
+      data:
+        title: "🚨 URGENT: Water Leak Detected"
+        description: >
+          Water leak sensor triggered at {{ trigger.to_state.attributes.friendly_name }}
+          at {{ now().strftime('%I:%M %p on %B %d, %Y') }}
+        priority: "high"
+        property_id: 1
+        due_date: "{{ now().strftime('%Y-%m-%d') }}"
+    - service: notify.mobile_app
+      data:
+        title: "Water Leak Emergency!"
+        message: "Maintenance task created in PropertyPal. Check immediately!"
+        data:
+          priority: high
+          ttl: 0
+
+# HVAC Filter Change Reminder (based on runtime)
+- alias: "PropertyPal: HVAC Runtime Reminder"
+  description: "Create task when HVAC has run for 720 hours"
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.hvac_runtime_hours
+      above: 720
+  action:
+    - service: rest_command.propertypal_create_task
+      data:
+        title: "HVAC Filter Change Due (720 hrs runtime)"
+        description: "HVAC system has run for {{ states('sensor.hvac_runtime_hours') }} hours"
+        priority: "medium"
+        property_id: 1
+
+# Smoke Detector Battery Low
+- alias: "PropertyPal: Smoke Detector Battery"
+  description: "Create task when smoke detector battery is low"
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.smoke_detector_battery
+      to: "on"
+  action:
+    - service: rest_command.propertypal_create_task
+      data:
+        title: "Replace Smoke Detector Battery"
+        description: "Smoke detector in {{ trigger.to_state.attributes.friendly_name }} has low battery"
+        priority: "high"
+        property_id: 1
+        due_date: "{{ (now() + timedelta(days=7)).strftime('%Y-%m-%d') }}"
+
+# ============================================================================
+# Task Notifications
+# ============================================================================
+
+# Daily summary of pending tasks
+- alias: "PropertyPal: Daily Task Summary"
+  description: "Send daily notification with pending tasks"
+  trigger:
+    - platform: time
+      at: "09:00:00"
+  condition:
+    - condition: numeric_state
+      entity_id: sensor.propertypal_maintenance_tasks
+      above: 0
+  action:
+    - service: notify.mobile_app
+      data:
+        title: "PropertyPal: Daily Task Summary"
+        message: >
+          You have {{ states('sensor.propertypal_maintenance_tasks') }} pending maintenance tasks.
+          High priority: {{ states('sensor.propertypal_high_priority_tasks') }}
+          Overdue: {{ states('sensor.propertypal_overdue_tasks') }}
+
+# Notify when task is overdue
+- alias: "PropertyPal: Overdue Task Alert"
+  description: "Alert when tasks become overdue"
+  trigger:
+    - platform: time
+      at: "09:00:00"
+  condition:
+    - condition: numeric_state
+      entity_id: sensor.propertypal_overdue_tasks
+      above: 0
+  action:
+    - service: notify.mobile_app
+      data:
+        title: "⚠️ PropertyPal: Overdue Tasks"
+        message: "You have {{ states('sensor.propertypal_overdue_tasks') }} overdue maintenance tasks!"
+        data:
+          priority: high
+
+# Notify 3 days before due date
+- alias: "PropertyPal: Upcoming Task Reminder"
+  description: "Remind about tasks due in 3 days"
+  trigger:
+    - platform: time
+      at: "18:00:00"
+  condition:
+    - condition: template
+      value_template: >
+        {% set tasks = state_attr('sensor.propertypal_maintenance_tasks', 'tasks') | default([]) %}
+        {% set three_days = (now() + timedelta(days=3)).date().isoformat() %}
+        {{ tasks | selectattr('due_date', 'eq', three_days) | list | count > 0 }}
+  action:
+    - service: notify.mobile_app
+      data:
+        title: "PropertyPal: Task Due Soon"
+        message: >
+          {{ state_attr('sensor.propertypal_next_due_task', 'title') }}
+          is due on {{ state_attr('sensor.propertypal_next_due_task', 'due_date') }}
+
+# ============================================================================
+# Seasonal Tasks
+# ============================================================================
+
+# Spring: Gutter Cleaning
+- alias: "PropertyPal: Spring Gutter Cleaning"
+  description: "Create gutter cleaning task in spring"
+  trigger:
+    - platform: time
+      at: "08:00:00"
+  condition:
+    - condition: template
+      value_template: "{{ now().month == 4 and now().day == 1 }}"
+  action:
+    - service: rest_command.propertypal_create_task
+      data:
+        title: "Spring Gutter Cleaning"
+        description: "Annual spring gutter cleaning and inspection"
+        priority: "medium"
+        property_id: 1
+        due_date: "{{ (now() + timedelta(days=30)).strftime('%Y-%m-%d') }}"
+
+# Fall: Winterization Tasks
+- alias: "PropertyPal: Fall Winterization"
+  description: "Create winterization tasks in fall"
+  trigger:
+    - platform: time
+      at: "08:00:00"
+  condition:
+    - condition: template
+      value_template: "{{ now().month == 10 and now().day == 1 }}"
+  action:
+    - service: rest_command.propertypal_create_task
+      data:
+        title: "Winterize Property"
+        description: "Check heating system, insulation, and weather stripping"
+        priority: "high"
+        property_id: 1
+        due_date: "{{ (now() + timedelta(days=30)).strftime('%Y-%m-%d') }}"
+
+# ============================================================================
+# Voice Assistant Integration
+# ============================================================================
+
+# Add task via voice command
+- alias: "PropertyPal: Voice Add Task"
+  description: "Add maintenance task via Alexa/Google Home"
+  trigger:
+    - platform: event
+      event_type: alexa_actionable_notification
+      event_data:
+        event_id: add_maintenance_task
+  action:
+    - service: rest_command.propertypal_create_task
+      data:
+        title: "{{ trigger.event.data.title }}"
+        description: "Added via voice assistant"
+        priority: "medium"
+        property_id: 1
