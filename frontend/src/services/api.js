@@ -25,8 +25,8 @@ export const API_BASE_URL = rawBaseUrl.endsWith('/api')
   ? rawBaseUrl.slice(0, -4)
   : rawBaseUrl;
 
-// BASE_URL should just be '/' for proper request routing
-const BASE_URL = '/';
+// Use the runtime API URL or fallback to relative path
+const BASE_URL = rawBaseUrl || '/';
 
 console.log('API Base URL:', BASE_URL);
 
@@ -52,22 +52,17 @@ const formatApiUrl = (url) => {
 // Add a request interceptor to add the auth token to requests
 api.interceptors.request.use(
   (config) => {
-    // Format API URL with prefix and ensure trailing slash if needed
+    // Format API URL with prefix
     config.url = formatApiUrl(config.url);
-    
-    // Add trailing slash if not present and not a query parameter
-    if (config.url && !config.url.endsWith('/') && !config.url.includes('?')) {
-      config.url = `${config.url}/`;
-    }
-    
+
     // Log every request for debugging
     console.log('Making API request to:', config.url);
-    
+
     const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => {

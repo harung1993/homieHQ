@@ -7,26 +7,21 @@
 .github
 
 # ======================================
-# DEVELOPMENT DOCS & SUMMARIES
+# DOCUMENTATION
 # ======================================
-# Exclude all summary and guide files (dev notes only)
-*SUMMARY*.md
-*STRUCTURE*.md
-*GUIDE*.md
-*CLEANUP*.md
-*ARCHITECTURE*.md
-*INTEGRATION*.md
-DOCKER_MOBILE_SETUP.md
-QUICK_START_DOCKER_MOBILE.md
-GITIGNORE_UPDATE_SUMMARY.md
-CLAUDE_CLEANUP_SUMMARY.md
+# Keep documentation lightweight in Docker images
+# Exclude temporary/generated docs
+*_SUMMARY.md
+*_NOTES.md
+.claude/
 
-# Keep only essential docs
+# Include only essential docs
 !README.md
+!CHANGELOG.md
 !DOCKER.md
 
-# Other documentation
-docs/
+# Archive documentation not needed in containers
+docs/archive/
 
 # Environment files
 .env
@@ -86,9 +81,10 @@ tmp/
 temp/
 
 # ======================================
-# MOBILE APP - Separate Repository
+# MOBILE APP
 # ======================================
-# Exclude entire mobile app folder from Docker builds
+# Exclude mobile app from backend/frontend Docker builds
+# Mobile app has its own build process
 mobile-app/
 
 # Mobile build artifacts
@@ -99,3 +95,4 @@ mobile-app/
 # Expo
 .expo/
 .expo-shared/
+expo-env.d.ts

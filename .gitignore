@@ -1,21 +1,19 @@
 # ======================================
-# DEVELOPMENT DOCS & SUMMARIES
+# DOCUMENTATION
 # ======================================
-# Exclude all summary and guide files (dev notes only)
-*SUMMARY*.md
-*STRUCTURE*.md
-*GUIDE*.md
-*CLEANUP*.md
-*ARCHITECTURE*.md
-*INTEGRATION*.md
-DOCKER_MOBILE_SETUP.md
-QUICK_START_DOCKER_MOBILE.md
-GITIGNORE_UPDATE_SUMMARY.md
-CLAUDE_CLEANUP_SUMMARY.md
+# Keep only essential documentation
+# Ignore temporary/generated docs
+*_SUMMARY.md
+*_NOTES.md
+.claude/
 
-# Keep only essential docs
+# Keep important documentation
 !README.md
+!CHANGELOG.md
+!QUICK_START.md
+!DEPLOYMENT_CHECKLIST.md
 !DOCKER.md
+!docs/
 
 # Python
 __pycache__/
@@ -126,24 +124,32 @@ nginx/ssl/*.key
 nginx/ssl/*.crt
 
 # ======================================
-# MOBILE APP - Separate Repository
+# MOBILE APP
 # ======================================
-# The mobile app will be in its own repo
-# Exclude ALL mobile app files (will be in separate repo)
-mobile-app/
-
-# Mobile app build artifacts
-*.apk
-*.ipa
-*.aab
-android/app/build/
-ios/Pods/
-ios/build/
+# Mobile app is part of this repo
+# Ignore mobile app build artifacts and dependencies
 
 # Expo
-.expo/
-.expo-shared/
-expo-env.d.ts
+mobile-app/.expo/
+mobile-app/.expo-shared/
+mobile-app/expo-env.d.ts
+
+# Node modules (mobile)
+mobile-app/node_modules/
+
+# Mobile app builds
+mobile-app/*.apk
+mobile-app/*.ipa
+mobile-app/*.aab
+mobile-app/android/app/build/
+mobile-app/ios/Pods/
+mobile-app/ios/build/
+mobile-app/dist/
 
 # Mobile environment
-.env.mobile
+mobile-app/.env
+mobile-app/.env.local
+!mobile-app/.env.example
+
+# EAS Build
+mobile-app/.eas/

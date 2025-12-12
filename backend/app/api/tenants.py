@@ -68,15 +68,29 @@ def get_tenants():
     
     result = []
     for tenant in tenants:
+        # Get property info if available
+        property_info = None
+        if tenant.property_id:
+            property_obj = Property.query.get(tenant.property_id)
+            if property_obj:
+                property_info = {
+                    'id': property_obj.id,
+                    'address': property_obj.address,
+                    'city': property_obj.city,
+                    'state': property_obj.state
+                }
+
         result.append({
             'id': tenant.id,
             'property_id': tenant.property_id,
+            'property': property_info,
             'first_name': tenant.first_name,
             'last_name': tenant.last_name,
             'email': tenant.email,
             'phone': tenant.phone,
             'lease_start': tenant.lease_start.isoformat() if tenant.lease_start else None,
             'lease_end': tenant.lease_end.isoformat() if tenant.lease_end else None,
+            'lease_end_date': tenant.lease_end.isoformat() if tenant.lease_end else None,
             'monthly_rent': tenant.monthly_rent,
             'security_deposit': tenant.security_deposit,
             'rent_paid_through': tenant.rent_paid_through.isoformat() if tenant.rent_paid_through else None,
@@ -170,16 +184,30 @@ def get_tenant(tenant_id):
     
     if not property_user or property_user.role not in ['owner', 'manager']:
         return jsonify({"error": "You don't have permission to view this tenant"}), 403
-    
+
+    # Get property info if available
+    property_info = None
+    if tenant.property_id:
+        property_obj = Property.query.get(tenant.property_id)
+        if property_obj:
+            property_info = {
+                'id': property_obj.id,
+                'address': property_obj.address,
+                'city': property_obj.city,
+                'state': property_obj.state
+            }
+
     result = {
         'id': tenant.id,
         'property_id': tenant.property_id,
+        'property': property_info,
         'first_name': tenant.first_name,
         'last_name': tenant.last_name,
         'email': tenant.email,
         'phone': tenant.phone,
         'lease_start': tenant.lease_start.isoformat() if tenant.lease_start else None,
         'lease_end': tenant.lease_end.isoformat() if tenant.lease_end else None,
+        'lease_end_date': tenant.lease_end.isoformat() if tenant.lease_end else None,
         'monthly_rent': tenant.monthly_rent,
         'security_deposit': tenant.security_deposit,
         'rent_paid_through': tenant.rent_paid_through.isoformat() if tenant.rent_paid_through else None,
