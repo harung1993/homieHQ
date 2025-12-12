@@ -81,25 +81,25 @@ services:
     networks:
       - propertypal-network
 
-  # Nginx Reverse Proxy
-  nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
-    container_name: propertypal-nginx
-    restart: always
-    ports:
-      - "${PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      - app_uploads:/app/uploads
-    depends_on:
-      - backend
-      - frontend
-    networks:
-      - propertypal-network
+  # Nginx Reverse Proxy (Commented out for mobile testing - port 443 conflict)
+  # nginx:
+  #   build:
+  #     context: ./nginx
+  #     dockerfile: Dockerfile
+  #   container_name: propertypal-nginx
+  #   restart: always
+  #   ports:
+  #     - "${PORT:-80}:80"
+  #     - "${HTTPS_PORT:-443}:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+  #     - ./nginx/ssl:/etc/nginx/ssl:ro
+  #     - app_uploads:/app/uploads
+  #   depends_on:
+  #     - backend
+  #     - frontend
+  #   networks:
+  #     - propertypal-network
 
 volumes:
   postgres_data:

@@ -34,28 +34,25 @@ done
 echo "Database is ready!"
 
 # Check if we need to initialize the database
-DB_TABLES=$(PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'")
+DB_TABLES=$(PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'" | tr -d ' ')
 
-if [ "$INIT_DB" = "true" ]; then
-    echo "Forced database initialization requested..."
-    /app/init_db.sh
-elif [ $DB_TABLES -lt 5 ]; then
-    echo "Database appears to be empty or missing tables. Running initial setup..."
-    /app/init_db.sh
-else
-    echo "Database tables exist. Running migrations if needed..."
-    # Check if migrations directory exists and try to run migrations
-    if [ -d "migrations" ]; then
-        # Try to run migrations, and if it fails, run init_db.sh
-        if ! flask db migrate -m "Auto migration" || ! flask db upgrade; then
-            echo "Migration failed! Resetting migration state..."
-            /app/init_db.sh
-        fi
-    else
-        echo "No migrations directory but database exists. Resetting migration state..."
-        /app/init_db.sh
-    fi
+echo "Found $DB_TABLES tables in database"
+
+# Initialize migrations folder if it doesn't exist
+if [ ! -d "migrations" ]; then
+    echo "Creating migrations folder..."
+    flask db init
 fi
+
+# Always try to run migrations
+echo "Running database migrations..."
+if [ $DB_TABLES -lt 5 ]; then
+    echo "Database appears to be empty. Creating initial migration..."
+    flask db migrate -m "Initial migration" || true
+fi
+
+echo "Applying migrations..."
+flask db upgrade
 
 # Start application based on environment
 if [ "$FLASK_ENV" = "production" ]; then

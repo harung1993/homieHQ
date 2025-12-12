@@ -29,6 +29,7 @@ def get_documents():
 
     property_id = request.args.get('property_id')
     tenant_id = request.args.get('tenant_id')
+    appliance_id = request.args.get('appliance_id')
     category = request.args.get('category')
     
     # If property_id is provided, check access first
@@ -69,8 +70,31 @@ def get_documents():
                 
             # User has access, get documents for this tenant
             query = Document.query.filter_by(tenant_id=tenant_id)
+        elif appliance_id:
+            # Verify appliance exists and user has access
+            from app.models.appliance import Appliance
+            appliance = Appliance.query.get(appliance_id)
+            if not appliance:
+                return jsonify({"error": "Appliance not found"}), 404
+
+            # Check if user has access to the appliance (either owns it or has access to its property)
+            if appliance.user_id != current_user_id:
+                if appliance.property_id:
+                    property_user = PropertyUser.query.filter_by(
+                        property_id=appliance.property_id,
+                        user_id=current_user_id,
+                        status='active'
+                    ).first()
+
+                    if not property_user or property_user.role not in ['owner', 'manager']:
+                        return jsonify({"error": "You don't have permission to view this appliance's documents"}), 403
+                else:
+                    return jsonify({"error": "Appliance not found or access denied"}), 404
+
+            # User has access, get documents for this appliance
+            query = Document.query.filter_by(appliance_id=appliance_id)
         else:
-            # No property_id or tenant_id - get all properties the user has owner or manager access to
+            # No property_id, tenant_id, or appliance_id - get all properties the user has owner or manager access to
             property_users = PropertyUser.query.filter(
                 PropertyUser.user_id == current_user_id,
                 PropertyUser.status == 'active',
@@ -114,6 +138,7 @@ def get_documents():
             'updated_at': doc.updated_at.isoformat(),
             'property_id': doc.property_id,
             'tenant_id': doc.tenant_id,
+            'appliance_id': doc.appliance_id,
             'expiration_date': doc.expiration_date.isoformat() if doc.expiration_date else None,
             'url': url,  # Add URL to the response
             'created_by': doc.user_id  # Include who uploaded the document
@@ -150,6 +175,7 @@ def upload_document():
     category = request.form.get('category')
     property_id = request.form.get('property_id')
     tenant_id = request.form.get('tenant_id')
+    appliance_id = request.form.get('appliance_id')
     expiration_date = request.form.get('expiration_date')
     
     if not title:
@@ -187,6 +213,27 @@ def upload_document():
         tenant = Tenant.query.filter_by(id=tenant_id, user_id=current_user_id).first()
         if not tenant:
             return jsonify({"error": "Tenant not found or access denied"}), 404
+
+    # Validate appliance_id if provided
+    if appliance_id:
+        from app.models.appliance import Appliance
+        appliance = Appliance.query.get(appliance_id)
+        if not appliance:
+            return jsonify({"error": "Appliance not found"}), 404
+
+        # Check if user has access to the appliance
+        if appliance.user_id != current_user_id:
+            if appliance.property_id:
+                property_user = PropertyUser.query.filter_by(
+                    property_id=appliance.property_id,
+                    user_id=current_user_id,
+                    status='active'
+                ).first()
+
+                if not property_user or property_user.role not in ['owner', 'manager']:
+                    return jsonify({"error": "You don't have permission to upload documents for this appliance"}), 403
+            else:
+                return jsonify({"error": "Appliance not found or access denied"}), 404
     
     # Secure the filename and generate a unique filename
     filename = secure_filename(file.filename)
@@ -205,6 +252,7 @@ def upload_document():
         user_id=current_user_id,
         property_id=property_id if property_id else None,
         tenant_id=tenant_id if tenant_id else None,
+        appliance_id=appliance_id if appliance_id else None,
         title=title,
         description=description,
         file_path=file_path,
@@ -277,7 +325,30 @@ def update_document(document_id):
             if not tenant:
                 return jsonify({"error": "Tenant not found or access denied"}), 404
         document.tenant_id = data['tenant_id']
-    
+
+    if 'appliance_id' in data:
+        # Validate appliance_id if provided and not null
+        if data['appliance_id']:
+            from app.models.appliance import Appliance
+            appliance = Appliance.query.get(data['appliance_id'])
+            if not appliance:
+                return jsonify({"error": "Appliance not found"}), 404
+
+            # Check if user has access to the appliance
+            if appliance.user_id != current_user_id:
+                if appliance.property_id:
+                    property_user = PropertyUser.query.filter_by(
+                        property_id=appliance.property_id,
+                        user_id=current_user_id,
+                        status='active'
+                    ).first()
+
+                    if not property_user or property_user.role not in ['owner', 'manager']:
+                        return jsonify({"error": "You don't have permission to link documents to this appliance"}), 403
+                else:
+                    return jsonify({"error": "Appliance not found or access denied"}), 404
+        document.appliance_id = data['appliance_id']
+
     if 'expiration_date' in data and data['expiration_date']:
         document.expiration_date = datetime.strptime(data['expiration_date'], '%Y-%m-%d').date()
     

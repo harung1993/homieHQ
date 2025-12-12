@@ -22,6 +22,7 @@ const Appliances = () => {
     brand: '',
     model: '',
     serial_number: '',
+    location: '',
     purchase_date: '',
     warranty_expiration: '',
     notes: '',
@@ -144,6 +145,7 @@ const Appliances = () => {
         brand: '',
         model: '',
         serial_number: '',
+        location: '',
         purchase_date: '',
         warranty_expiration: '',
         notes: '',
@@ -172,6 +174,7 @@ const Appliances = () => {
       brand: appliance.brand || '',
       model: appliance.model || '',
       serial_number: appliance.serial_number || '',
+      location: appliance.location || '',
       purchase_date: appliance.purchase_date || '',
       warranty_expiration: appliance.warranty_expiration || '',
       notes: appliance.notes || '',
@@ -204,6 +207,7 @@ const Appliances = () => {
         brand: '',
         model: '',
         serial_number: '',
+        location: '',
         purchase_date: '',
         warranty_expiration: '',
         notes: '',
@@ -502,22 +506,34 @@ const Appliances = () => {
                 
                 <div>
                   <label className="form-label">Serial Number</label>
-                  <input 
-                    type="text" 
-                    name="serial_number" 
-                    className="form-input" 
-                    value={newAppliance.serial_number} 
+                  <input
+                    type="text"
+                    name="serial_number"
+                    className="form-input"
+                    value={newAppliance.serial_number}
                     onChange={handleInputChange}
                   />
                 </div>
-                
+
+                <div>
+                  <label className="form-label">Location</label>
+                  <input
+                    type="text"
+                    name="location"
+                    className="form-input"
+                    value={newAppliance.location}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Kitchen, Master Bedroom, Basement"
+                  />
+                </div>
+
                 <div>
                   <label className="form-label">Purchase Date</label>
-                  <input 
-                    type="date" 
-                    name="purchase_date" 
-                    className="form-input" 
-                    value={newAppliance.purchase_date} 
+                  <input
+                    type="date"
+                    name="purchase_date"
+                    className="form-input"
+                    value={newAppliance.purchase_date}
                     onChange={handleInputChange}
                   />
                 </div>
@@ -628,22 +644,34 @@ const Appliances = () => {
                 
                 <div>
                   <label className="form-label">Serial Number</label>
-                  <input 
-                    type="text" 
-                    name="serial_number" 
-                    className="form-input" 
-                    value={newAppliance.serial_number} 
+                  <input
+                    type="text"
+                    name="serial_number"
+                    className="form-input"
+                    value={newAppliance.serial_number}
                     onChange={handleInputChange}
                   />
                 </div>
-                
+
+                <div>
+                  <label className="form-label">Location</label>
+                  <input
+                    type="text"
+                    name="location"
+                    className="form-input"
+                    value={newAppliance.location}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Kitchen, Master Bedroom, Basement"
+                  />
+                </div>
+
                 <div>
                   <label className="form-label">Purchase Date</label>
-                  <input 
-                    type="date" 
-                    name="purchase_date" 
-                    className="form-input" 
-                    value={newAppliance.purchase_date} 
+                  <input
+                    type="date"
+                    name="purchase_date"
+                    className="form-input"
+                    value={newAppliance.purchase_date}
                     onChange={handleInputChange}
                   />
                 </div>
@@ -768,8 +796,11 @@ const Appliances = () => {
                       <span>Serial: {appliance.serial_number || 'N/A'}</span>
                       <span>Age: {getApplianceAge(appliance.purchase_date)}</span>
                     </div>
-                    <div className="flex justify-between text-xs text-gray-400 mb-4">
+                    <div className="flex justify-between text-xs text-gray-400 mb-2">
                       <span>Category: {appliance.category}</span>
+                      <span>Location: {appliance.location || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-400 mb-4">
                       <span>Purchased: {appliance.purchase_date ? new Date(appliance.purchase_date).toLocaleDateString() : 'Unknown'}</span>
                     </div>
                   </div>

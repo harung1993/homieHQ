@@ -48,9 +48,14 @@ yarn-debug.log
 yarn-error.log
 
 # Documentation
-README.md
-docs/
-*.md
+*_SUMMARY.md
+*_NOTES.md
+docs/archive/
+.claude/
+
+# Keep essential docs
+!README.md
+!CHANGELOG.md
 
 # Tests
 tests/

@@ -623,11 +623,11 @@ const HomeOwnerDashboard = () => {
           {/* Home Image Card */}
           <div className="card mb-8 overflow-hidden">
             <div className="relative">
-              <div className="h-64 bg-gray-700 flex items-center justify-center">
+              <div className="h-64 bg-gray-700 rounded-lg flex items-center justify-center">
                 {homePhotos.length > 0 ? (
                   <div className="relative w-full h-full">
                     {/* Display static placeholder house instead of trying to load from API */}
-                    <div className="fallback-house absolute inset-0 flex flex-col items-center justify-center bg-gray-800">
+                    <div className="fallback-house absolute inset-0 flex flex-col items-center justify-center bg-gray-800 rounded-lg">
                       <svg className="h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" 
                           d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -708,7 +708,7 @@ const HomeOwnerDashboard = () => {
                 )}
               </div>
             </div>
-            <div className="p-4 bg-card-bg flex justify-between items-center">
+            <div className="p-4 bg-card-bg rounded-b-lg flex justify-between items-center">
               <div>
                 <h3 className="font-medium">Home Exterior</h3>
                 <p className="text-sm text-gray-400">
